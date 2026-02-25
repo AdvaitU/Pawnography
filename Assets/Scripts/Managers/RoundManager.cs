@@ -45,7 +45,9 @@ public class RoundManager : MonoBehaviour
 
     private void Start()
     {
-        StartNewRound();
+        // First round is now started by ShopManager after it finishes
+        // syncing all stats, to avoid initialisation order issues.
+        // See ShopManager.Start()
     }
 
     /// <summary>
@@ -134,5 +136,27 @@ public class RoundManager : MonoBehaviour
     {
         Debug.Log("[RoundManager] GAME OVER.");
         onGameOver?.Invoke();
+    }
+
+    /// <summary>
+    /// Cancels a previously accepted card selection, refunding the selection count.
+    /// Called if the player backs out of a confirmation popup or cannot complete the action.
+    /// </summary>
+    public void CancelCardSelection(CardData card)
+    {
+        if (!selectedCards.Contains(card))
+        {
+            Debug.LogWarning("[RoundManager] Tried to cancel a selection that was never made.");
+            return;
+        }
+
+        selectedCards.Remove(card);
+        selectionsThisRound--;
+        selectionsThisRound = Mathf.Max(0, selectionsThisRound); // Safety clamp
+
+        Debug.Log($"[RoundManager] Selection cancelled for '{card.cardName}'. ({selectionsThisRound}/{maxSelectionsPerRound})");
+
+        // Notify UI to update the HUD counter
+        onCardSelected?.Invoke();
     }
 }

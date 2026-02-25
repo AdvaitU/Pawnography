@@ -48,8 +48,19 @@ public class InventoryManager : MonoBehaviour
         }
 
         InventoryItem newItem = new InventoryItem(sourceCard);
-        items.Add(newItem);
 
+        // Check if hired staff can auto-identify this item type
+        // subCategory on the card corresponds to the item type (e.g. "Antiques")
+        if (!string.IsNullOrEmpty(sourceCard.subCategory) &&
+            ShopManager.Instance.CanAutoIdentify(sourceCard.subCategory))
+        {
+            newItem.isAppraised = true;
+            newItem.appraisedValue = sourceCard.itemTrueValue;
+            Debug.Log($"[InventoryManager] '{sourceCard.cardName}' auto-identified by staff " +
+                      $"as worth {sourceCard.itemTrueValue}g.");
+        }
+
+        items.Add(newItem);
         Debug.Log($"[InventoryManager] Added '{sourceCard.cardName}' to inventory. ({items.Count}/{maxSlots} slots used)");
         onInventoryChanged?.Invoke();
         return true;

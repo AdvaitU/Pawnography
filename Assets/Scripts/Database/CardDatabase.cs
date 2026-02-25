@@ -22,12 +22,16 @@ public class CardDatabase : MonoBehaviour
 
     private void Awake()
     {
-        // Singleton setup — database persists across scenes
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
         BuildLookup();
+
+        // Always reset spawn tracking when the game starts.
+        // ScriptableObject values persist between Editor Play sessions,
+        // so stale counters from a previous session can cause spawn issues.
+        ResetAllSpawnTracking();
     }
 
     /// <summary>
@@ -45,13 +49,20 @@ public class CardDatabase : MonoBehaviour
 
         foreach (CardData card in allCards)
         {
+            // Guard against null card entries in the list
+            if (card == null)
+            {
+                Debug.LogWarning("[CardDatabase] Null entry found in allCards list — check the CardDatabase Inspector for empty slots.");
+                continue;
+            }
+
             if (card.category != null && cardsByCategory.ContainsKey(card.category))
             {
                 cardsByCategory[card.category].Add(card);
             }
             else
             {
-                Debug.LogWarning($"[CardDatabase] Card '{card.cardName}' has a missing or unregistered category.");
+                Debug.LogWarning($"[CardDatabase] Card '{card.cardName}' has a missing or unregistered category. It will not spawn.");
             }
         }
     }
@@ -159,22 +170,40 @@ public class CardDatabase : MonoBehaviour
     public List<CardData> DrawRoundCards(int count = 4)
     {
         List<CardData> drawn = new List<CardData>();
-        int maxAttempts = count * 10; // prevent infinite loop if pool is small
+        int maxAttempts = count * 10;
         int attempts = 0;
+
+        // Count how many eligible cards exist in total
+        int eligibleCount = 0;
+        foreach (CardData card in allCards)
+            if (card != null && card.canSpawn && card.spawnWeight > 0f) eligibleCount++;
 
         while (drawn.Count < count && attempts < maxAttempts)
         {
             attempts++;
             CardData card = PickRandomCard();
 
-            if (card == null) break;
+            if (card == null)
+            {
+                Debug.LogWarning("[CardDatabase] PickRandomCard() returned null.");
+                break;
+            }
 
-            // Avoid showing the exact same card definition twice in one round
-            if (!drawn.Contains(card))
+            // Only enforce duplicate prevention if the pool is large enough.
+            // If the eligible pool is smaller than the requested count,
+            // duplicates are allowed as a fallback to always fill the hand.
+            if (eligibleCount >= count)
+            {
+                if (!drawn.Contains(card))
+                {
+                    drawn.Add(card);
+                    card.timesSpawnedThisRun++;
+                    card.category.totalSpawnedThisRun++;
+                }
+            }
+            else
             {
                 drawn.Add(card);
-
-                // Update spawn tracking on both the card and its category
                 card.timesSpawnedThisRun++;
                 card.category.totalSpawnedThisRun++;
             }

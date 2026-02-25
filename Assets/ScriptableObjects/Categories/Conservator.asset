@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1aae4eefbb482fe45816127b83c5e36c, type: 3}
   m_Name: Conservator
   m_EditorClassIdentifier: 
-  categoryName: Conservator (Expert)
+  categoryName: Conservator
   categoryDescription: People who can identify and/or increase the value of your
     inventory items by identifying, grading, repairing, furnishing, etc.
   canSpawn: 1
   spawnWeight: 20
-  totalSpawnedThisRun: 0
+  totalSpawnedThisRun: 15

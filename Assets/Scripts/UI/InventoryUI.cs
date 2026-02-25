@@ -9,6 +9,15 @@ using TMPro;
 /// </summary>
 public class InventoryUI : MonoBehaviour
 {
+
+    public static InventoryUI Instance { get; private set; }
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        Instance = this;
+    }
+
     [Header("References — assign in Inspector")]
     public GameObject inventoryScreen;
     public Button openInventoryButton;

@@ -57,9 +57,22 @@ public class CardData : ScriptableObject
 
     // ── CONTRACTOR fields ──
     [Header("Contractor Fields")]
-    [Tooltip("Which shop stat this contractor upgrades.")]
-    public string upgradeTargetStat;
+    [Tooltip("Which type of upgrade this contractor applies.")]
+    public ContractorUpgradeType upgradeType = ContractorUpgradeType.None;
+
+    [Tooltip("Numeric amount for stat upgrades (e.g. +1 warehouse slot, +5 reputation).")]
     public int upgradeAmount = 0;
+
+    [Tooltip("For UnlockCategory: drag the CardCategory asset to unlock here.")]
+    public CardCategory categoryToUnlock;
+
+    [Tooltip("For UnlockSubCategory: the sub-category string to unlock (must match subCategory field on CardData assets).")]
+    public string subCategoryToUnlock;
+
+    [Tooltip("For HireStaff: which item type this staff member can auto-identify. " +
+             "Must match the subCategory field on Seller CardData assets exactly. " +
+             "e.g. Antiques, Electronics, Jewellery, Art, Weapons, Collectibles, Books & Documents")]
+    public string staffIdentifiesItemType;
 
     // ── FREELANCER fields ──
     [Header("Freelancer Fields")]

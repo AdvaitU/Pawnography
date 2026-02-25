@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab2ab7d367e4af345bb77b98e447490a, type: 3}
+  m_Name: Fixer
+  m_EditorClassIdentifier: 
+  cardName: Fixer
+  cardDescription: Opens up the business to associates who can do freelance work
+  cardArt: {fileID: 0}
+  category: {fileID: 11400000, guid: 6afdfb0db0498464c86d9c1b628000a8, type: 2}
+  subCategory: 
+  canSpawn: 1
+  spawnWeight: 100
+  timesSpawnedThisRun: 0
+  itemBuyCost: 0
+  itemTrueValue: 0
+  valueIsHidden: 1
+  buyerDesiredItemType: 
+  buyerOfferedPrice: 0
+  appraisalAccuracy: 1
+  upgradeType: 4
+  upgradeAmount: 0
+  categoryToUnlock: {fileID: 11400000, guid: eba10a138cf705f48b01322f46910f0f, type: 2}
+  subCategoryToUnlock: 
+  staffIdentifiesItemType: 
+  roundsToReturn: 3
+  freelancerMinItemValue: 0
+  freelancerMaxItemValue: 0

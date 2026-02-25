@@ -127,8 +127,13 @@ public class CardUI : MonoBehaviour
             case "Contractor":
                 costText.gameObject.SetActive(true);
                 valueText.gameObject.SetActive(true);
-                costText.text = $"Upgrades: {card.upgradeTargetStat}";
-                valueText.text = $"Amount: +{card.upgradeAmount}";
+                // Display the enum type as a readable string
+                costText.text = $"Upgrades: {card.upgradeType}";
+                valueText.text = card.upgradeType == ContractorUpgradeType.UnlockCategory
+                    ? $"Unlocks: {(card.categoryToUnlock != null ? card.categoryToUnlock.categoryName : "?")}"
+                    : card.upgradeType == ContractorUpgradeType.HireStaff
+                        ? $"Identifies: {card.staffIdentifiesItemType}"
+                        : $"Amount: +{card.upgradeAmount}";
                 break;
 
             case "Freelancer":
@@ -165,14 +170,12 @@ public class CardUI : MonoBehaviour
     /// </summary>
     private void OnSelectButtonClicked()
     {
-        if (isSelected) return; // Already selected, ignore
+        if (isSelected) return;
 
-        bool accepted = RoundManager.Instance.TrySelectCard(assignedCard);
-
-        if (accepted)
-        {
-            SetSelectedVisual(true);
-        }
+        // Route through the interaction manager first.
+        // The interaction manager will call RoundManager.TrySelectCard() itself
+        // once any popups are confirmed, and will call SetSelectedVisual() on this card.
+        CardInteractionManager.Instance.HandleCardSelected(assignedCard, this);
     }
 
     /// <summary>
