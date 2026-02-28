@@ -1,12 +1,35 @@
-﻿using UnityEngine;
+﻿/*
+ * ============================================================
+ * SCRIPT:      CardInteractionManager.cs
+ * GAMEOBJECT:  GameManager
+ * ------------------------------------------------------------
+ * FUNCTION:
+ *   Executes card effects when called by RoundManager during
+ *   ProcessAndEndRound(). Each staged card is executed in
+ *   sequence with no confirmation popups — the hover popup
+ *   in HoverPopupUI already gives the player all the info
+ *   they need before committing. Buyer and Conservator cards
+ *   still open item-selection popups since those require the
+ *   player to choose a specific inventory item.
+ *   Add new category cases to ExecuteCardEffect() as new
+ *   card types are introduced.
+ * ------------------------------------------------------------
+ * REFERENCED BY:
+ *   RoundManager        -- calls ExecuteCardEffect() for each
+ *                          staged card during ProcessAndEndRound()
+ * ------------------------------------------------------------
+ * METHODS CALLED BY OTHER SCRIPTS:
+ *   ExecuteCardEffect() --> Called by RoundManager.ProcessAndEndRound()
+ *                          for each staged card
+ * ------------------------------------------------------------
+ * OPTIMISATION NOTES:
+ *   Awake() -- singleton setup only. No Start(), no Update().
+ *   All logic is triggered by RoundManager on round end.
+ * ============================================================
+ */
 
-/// <summary>
-/// The central handler for all card selection interactions.
-/// When a card is clicked, CardUI calls HandleCardSelected() here.
-/// This manager decides what popup to show, what to do on confirm,
-/// and whether to finalise or cancel the selection with RoundManager.
-/// Attach to the GameManager GameObject.
-/// </summary>
+using UnityEngine;
+
 public class CardInteractionManager : MonoBehaviour
 {
     public static CardInteractionManager Instance { get; private set; }
@@ -18,111 +41,76 @@ public class CardInteractionManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Entry point called by CardUI when the player clicks Select on a card.
-    /// Routes to the correct handler based on category name.
+    /// Entry point called by RoundManager.ProcessAndEndRound() for each staged card.
+    /// Routes to the correct execution handler based on category name.
     /// Add new cases here when new card categories are introduced.
     /// </summary>
-    public void HandleCardSelected(CardData card, CardUI cardUI)
+    public void ExecuteCardEffect(CardData card)
     {
         if (card.category == null)
         {
-            Debug.LogWarning($"[CardInteractionManager] Card '{card.cardName}' has no category assigned.");
+            Debug.LogWarning($"[CardInteractionManager] '{card.cardName}' has no category.");
             return;
         }
 
         switch (card.category.categoryName)
         {
-            case "Seller":
-                HandleSeller(card, cardUI);
-                break;
-
-            case "Buyer":
-                HandleBuyer(card, cardUI);
-                break;
-
-            case "Conservator":
-                HandleConservator(card, cardUI);
-                break;
-
-            case "Contractor":
-                HandleContractor(card, cardUI);
-                break;
-
-            case "Freelancer":
-                HandleFreelancer(card, cardUI);
-                break;
-
-            // ── Add new card category cases here ──
-
+            case "Seller": ExecuteSeller(card); break;
+            case "Buyer": ExecuteBuyer(card); break;
+            case "Conservator": ExecuteConservator(card); break;
+            case "Contractor": ExecuteContractor(card); break;
+            case "Freelancer": ExecuteFreelancer(card); break;
+            // ── Add new cases here ──
             default:
-                Debug.LogWarning($"[CardInteractionManager] No handler for category '{card.category.categoryName}'.");
+                Debug.LogWarning($"[CardInteractionManager] No handler for '{card.category.categoryName}'.");
                 break;
         }
     }
 
     // ─────────────────────────────────────────────
     // SELLER
+    // No confirmation popup — item is bought immediately.
+    // If inventory is full, a warning opens so the player
+    // can sell something first.
     // ─────────────────────────────────────────────
 
-    private void HandleSeller(CardData card, CardUI cardUI)
+    private void ExecuteSeller(CardData card)
     {
-        // Check inventory space BEFORE showing the purchase popup
         if (!InventoryManager.Instance.HasSpace())
         {
-            // Warehouse full — open warning and auto-open inventory so player can sell
+            // Inventory full — open warning with shortcut to warehouse
             PopupManager.Instance.OpenWarehouseFullWarning(() =>
             {
                 InventoryUI.Instance.OpenInventory();
             });
-            return; // Do NOT register a selection
+            return;
         }
 
-        // Inventory has space — show purchase confirmation
-        PopupManager.Instance.OpenSellerConfirmation(
-            card,
-            onConfirm: () =>
-            {
-                // Player confirmed purchase — register the selection and add item
-                bool accepted = RoundManager.Instance.TrySelectCard(card);
-                if (accepted)
-                {
-                    InventoryManager.Instance.TryAddItem(card);
-                    cardUI.SetSelectedVisual(true);
-                    CardUIManager.Instance.UpdateHUD();
-                }
-            },
-            onCancel: () =>
-            {
-                // Player backed out — do nothing, selection is not registered
-                Debug.Log($"[CardInteractionManager] Purchase of '{card.cardName}' cancelled.");
-            }
-        );
+        // Buy immediately — no confirmation required
+        InventoryManager.Instance.TryAddItem(card);
+        CardUIManager.Instance.UpdateHUD();
+        Debug.Log($"[CardInteractionManager] Bought '{card.cardName}' for {card.itemBuyCost}g.");
+        // ── Gold deduction added here when economy system is built ──
     }
 
     // ─────────────────────────────────────────────
     // BUYER
+    // Still needs an item selection popup — the player must
+    // choose which inventory item to sell.
     // ─────────────────────────────────────────────
 
-    private void HandleBuyer(CardData card, CardUI cardUI)
+    private void ExecuteBuyer(CardData card)
     {
         PopupManager.Instance.OpenBuyerItemSelection(
             card,
             InventoryManager.Instance.items,
             onItemChosen: (item) =>
             {
-                // Player chose an item to sell
-                bool accepted = RoundManager.Instance.TrySelectCard(card);
-                if (accepted)
-                {
-                    InventoryManager.Instance.TryRemoveItem(item);
-                    cardUI.SetSelectedVisual(true);
-                    CardUIManager.Instance.UpdateHUD();
-
-                    Debug.Log($"[CardInteractionManager] Sold '{item.cardName}' to buyer '{card.cardName}' " +
-                              $"for {card.buyerOfferedPrice}g.");
-
-                    // ── Gold will be added here when economy system is built ──
-                }
+                InventoryManager.Instance.TryRemoveItem(item);
+                CardUIManager.Instance.UpdateHUD();
+                Debug.Log($"[CardInteractionManager] Sold '{item.cardName}' " +
+                          $"to '{card.cardName}' for {card.buyerOfferedPrice}g.");
+                // ── Gold addition added here when economy system is built ──
             },
             onCancel: () =>
             {
@@ -132,39 +120,20 @@ public class CardInteractionManager : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────
-    // CONSERVATOR / EXPERT
+    // CONSERVATOR
+    // Still needs an item selection popup — the player must
+    // choose which inventory item to appraise.
     // ─────────────────────────────────────────────
 
-    private void HandleConservator(CardData card, CardUI cardUI)
+    private void ExecuteConservator(CardData card)
     {
         PopupManager.Instance.OpenConservatorItemSelection(
             card,
             InventoryManager.Instance.items,
             onItemChosen: (item) =>
             {
-                // Apply appraisal with accuracy modifier
-                // Accuracy of 1.0 = perfect value, lower = random deviation
-                float accuracy = card.appraisalAccuracy;
-                float deviation = 1f - accuracy; // e.g. 0.2 accuracy means up to 20% off
-
-                // Generate appraised value within the accuracy range
-                float multiplier = UnityEngine.Random.Range(1f - deviation, 1f + deviation);
-                int appraisedValue = Mathf.RoundToInt(item.sourceCard.itemTrueValue * multiplier);
-
-                item.isAppraised = true;
-                item.appraisedValue = appraisedValue;
-
-                bool accepted = RoundManager.Instance.TrySelectCard(card);
-                if (accepted)
-                {
-                    cardUI.SetSelectedVisual(true);
-                    CardUIManager.Instance.UpdateHUD();
-                }
-
-                Debug.Log($"[CardInteractionManager] '{item.cardName}' appraised at {appraisedValue}g " +
-                          $"(true value: {item.sourceCard.itemTrueValue}g, accuracy: {accuracy * 100}%).");
-
-                // Refresh inventory UI if it's open
+                ApplyConservatorToItem(card, item);
+                CardUIManager.Instance.UpdateHUD();
                 InventoryUI.Instance.RefreshInventoryDisplay();
             },
             onCancel: () =>
@@ -174,49 +143,59 @@ public class CardInteractionManager : MonoBehaviour
         );
     }
 
+    /// <summary>
+    /// Applies appraisal and condition improvement to the chosen item.
+    /// Full condition bonus if item subCategory matches conservator expertise,
+    /// reduced bonus (nonExpertiseMultiplier) otherwise.
+    /// </summary>
+    private void ApplyConservatorToItem(CardData conservator, InventoryItem item)
+    {
+        // ── Value appraisal ──
+        float deviation = 1f - conservator.appraisalAccuracy;
+        float multiplier = UnityEngine.Random.Range(1f - deviation, 1f + deviation);
+        int appraisedValue = Mathf.RoundToInt(item.sourceCard.itemTrueValue * multiplier);
+
+        item.isAppraised = true;
+        item.appraisedValue = appraisedValue;
+
+        // ── Condition improvement ──
+        bool isExpertise = !string.IsNullOrEmpty(conservator.conservatorExpertise) &&
+                           conservator.conservatorExpertise == item.sourceCard.subCategory;
+
+        int conditionBonus = isExpertise
+            ? conservator.appraisalLevel
+            : Mathf.RoundToInt(conservator.appraisalLevel * conservator.nonExpertiseMultiplier);
+
+        item.sourceCard.itemCondition = Mathf.Clamp(
+            item.sourceCard.itemCondition + conditionBonus, 0, 100);
+
+        Debug.Log($"[CardInteractionManager] '{item.cardName}' appraised at {appraisedValue}g. " +
+                  $"Condition +{conditionBonus} " +
+                  $"({(isExpertise ? "full expertise" : "partial")}). " +
+                  $"New condition: {item.sourceCard.itemCondition}.");
+    }
+
     // ─────────────────────────────────────────────
     // CONTRACTOR
+    // No confirmation popup — upgrade applied immediately.
     // ─────────────────────────────────────────────
 
-    private void HandleContractor(CardData card, CardUI cardUI)
+    private void ExecuteContractor(CardData card)
     {
-        // Apply the upgrade immediately via ShopManager and get the before/after result string
         string upgradeResult = ShopManager.Instance.ApplyUpgrade(card);
-
-        // Show confirmation popup with before → after values
-        PopupManager.Instance.OpenContractorConfirmation(card, upgradeResult, onConfirm: () =>
-        {
-            bool accepted = RoundManager.Instance.TrySelectCard(card);
-            if (accepted)
-            {
-                cardUI.SetSelectedVisual(true);
-                CardUIManager.Instance.UpdateHUD();
-            }
-        });
+        CardUIManager.Instance.UpdateHUD();
+        Debug.Log($"[CardInteractionManager] Contractor '{card.cardName}' applied: {upgradeResult}.");
     }
 
     // ─────────────────────────────────────────────
     // FREELANCER
+    // No confirmation popup — freelancer sent out immediately.
     // ─────────────────────────────────────────────
 
-    private void HandleFreelancer(CardData card, CardUI cardUI)
+    private void ExecuteFreelancer(CardData card)
     {
-        PopupManager.Instance.OpenFreelancerConfirmation(
-            card,
-            onConfirm: () =>
-            {
-                bool accepted = RoundManager.Instance.TrySelectCard(card);
-                if (accepted)
-                {
-                    FreelancerManager.Instance.SendOutFreelancer(card);
-                    cardUI.SetSelectedVisual(true);
-                    CardUIManager.Instance.UpdateHUD();
-                }
-            },
-            onCancel: () =>
-            {
-                Debug.Log($"[CardInteractionManager] Freelancer '{card.cardName}' not sent out.");
-            }
-        );
+        FreelancerManager.Instance.SendOutFreelancer(card);
+        CardUIManager.Instance.UpdateHUD();
+        Debug.Log($"[CardInteractionManager] Freelancer '{card.cardName}' sent out.");
     }
 }

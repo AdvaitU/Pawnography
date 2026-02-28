@@ -1,194 +1,179 @@
-﻿using UnityEngine;
+﻿/*
+ * ============================================================
+ * SCRIPT:      CardUI.cs
+ * GAMEOBJECT:  Card Prefab instance (spawned at runtime under
+ *              CardRowPanel by CardUIManager)
+ * ------------------------------------------------------------
+ * FUNCTION:
+ *   Attached to each card prefab instance. Displays splash art,
+ *   card name, and one quick-info line relevant to the card type.
+ *   The entire card is a button — clicking toggles the staged
+ *   selection state via RoundManager. Hover detection is
+ *   delegated to CardHoverHandler on the same GameObject.
+ *   Does NOT execute card effects on click — effects are
+ *   deferred until Next Round is confirmed.
+ * ------------------------------------------------------------
+ * REFERENCED BY:
+ *   CardUIManager       -- calls Populate() when spawning cards;
+ *                          calls SetSelectedVisual() to sync
+ *                          visuals after staging changes
+ * ------------------------------------------------------------
+ * METHODS CALLED BY OTHER SCRIPTS:
+ *   Populate()          --> Called by CardUIManager.SpawnCards()
+ *   SetSelectedVisual() --> Called by CardUIManager after a
+ *                          staging toggle to refresh visuals
+ * ------------------------------------------------------------
+ * OPTIMISATION NOTES:
+ *   Awake() -- hooks up card button onClick listener.
+ *   No Update(). Destroyed and re-instantiated each round by
+ *   CardUIManager. Consider object pooling if performance
+ *   degrades with large card counts.
+ * ============================================================
+ */
+
+using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-/// <summary>
-/// Attached to each card prefab instance.
-/// Receives a CardData reference and populates all UI elements accordingly.
-/// Also handles the visual selected state and the Select button click.
-/// </summary>
 public class CardUI : MonoBehaviour
 {
     [Header("UI References — assign in Inspector")]
-    public Image categoryBanner;
-    public TextMeshProUGUI categoryText;
-    public TextMeshProUGUI cardNameText;
-    public TextMeshProUGUI cardDescriptionText;
-    public TextMeshProUGUI costText;
-    public TextMeshProUGUI valueText;
-    public Button selectButton;
-    public GameObject selectedOverlay;
-
-    [Tooltip("The Image component that displays the card's unique artwork.")]
     public Image cardArtImage;
+    public TextMeshProUGUI cardNameText;
+    public TextMeshProUGUI cardQuickInfoText;
+    public GameObject selectedOverlay;
+    public Button cardButton; // The invisible full-card button
 
-    [Header("Category Colours — assign in Inspector")]
-    [Tooltip("Colour for Seller category banner")]
-    public Color sellerColour = new Color(0.2f, 0.6f, 0.9f);   // blue
-    [Tooltip("Colour for Buyer category banner")]
-    public Color buyerColour = new Color(0.9f, 0.6f, 0.2f);    // orange
-    [Tooltip("Colour for Conservator category banner")]
-    public Color conservatorColour = new Color(0.4f, 0.8f, 0.4f); // green
-    [Tooltip("Colour for Contractor category banner")]
-    public Color contractorColour = new Color(0.7f, 0.4f, 0.9f);  // purple
-    [Tooltip("Colour for Freelancer category banner")]
-    public Color freelancerColour = new Color(0.9f, 0.3f, 0.3f);  // red
+    [Header("Category Colours")]
+    public Color sellerColour = new Color(0.2f, 0.6f, 0.9f);
+    public Color buyerColour = new Color(0.9f, 0.6f, 0.2f);
+    public Color conservatorColour = new Color(0.4f, 0.8f, 0.4f);
+    public Color contractorColour = new Color(0.7f, 0.4f, 0.9f);
+    public Color freelancerColour = new Color(0.9f, 0.3f, 0.3f);
 
     [Header("Runtime State")]
     public CardData assignedCard;
-    public bool isSelected = false;
+    public bool isStaged = false;
+
+    private CardHoverHandler hoverHandler;
 
     private void Awake()
     {
-        // Hook up the select button click
-        selectButton.onClick.AddListener(OnSelectButtonClicked);
+        // CardHoverHandler and CardVisualController live on the
+        // CardVisual child object, so search in children
+        hoverHandler = GetComponentInChildren<CardHoverHandler>();
+        cardButton.onClick.AddListener(OnCardClicked);
 
-        // Make sure the selected overlay starts hidden
         if (selectedOverlay != null)
             selectedOverlay.SetActive(false);
     }
 
     /// <summary>
-    /// Call this to populate the card with data from a CardData ScriptableObject.
-    /// Called by CardUIManager when spawning cards for a new round.
+    /// Populates the card face with data. Shows splash art, name,
+    /// and a single relevant quick-info line based on card category.
+    /// Called by CardUIManager when spawning cards each round.
     /// </summary>
     public void Populate(CardData card)
     {
         assignedCard = card;
-        isSelected = false;
+        isStaged = false;
 
         if (selectedOverlay != null)
             selectedOverlay.SetActive(false);
 
-        // ── Text fields ──
-        cardNameText.text = card.cardName;
-        cardDescriptionText.text = card.cardDescription;
-        categoryText.text = card.category != null ? card.category.categoryName : "Unknown";
-
-        // ── Category banner colour ──
-        if (categoryBanner != null && card.category != null)
-            categoryBanner.color = GetCategoryColour(card.category.categoryName);
-
         // ── Card art ──
-        // If the CardData has a sprite assigned, display it.
-        // If not, the image stays white (its default colour) acting as an empty placeholder.
         if (cardArtImage != null)
         {
-            if (card.cardArt != null)
-            {
-                cardArtImage.sprite = card.cardArt;
-                cardArtImage.color = Color.white; // Ensure full visibility
-            }
-            else
-            {
-                cardArtImage.sprite = null;
-                cardArtImage.color = Color.white; // Plain white placeholder
-            }
+            cardArtImage.sprite = card.cardArt != null ? card.cardArt : null;
+            cardArtImage.color = Color.white;
         }
 
-        // ── Stat fields — shown conditionally based on category ──
-        UpdateStatFields(card);
+        // ── Name ──
+        cardNameText.text = card.cardName;
+
+        // ── Quick info line ──
+        cardQuickInfoText.text = GetQuickInfo(card);
+
+        // ── Pass data to hover handler ──
+        if (hoverHandler != null)
+            hoverHandler.SetCardData(card);
     }
 
     /// <summary>
-    /// Populates the cost and value text fields based on what kind of card this is.
-    /// Extend this switch block when you add new card categories.
+    /// Returns a single short info string relevant to the card's category.
+    /// This is the only information shown on the card face besides the name.
+    /// Add new cases here as new card categories are introduced.
     /// </summary>
-    private void UpdateStatFields(CardData card)
+    private string GetQuickInfo(CardData card)
     {
-        // Hide both by default, then show relevant ones
-        costText.gameObject.SetActive(false);
-        valueText.gameObject.SetActive(false);
-
-        if (card.category == null) return;
+        if (card.category == null) return string.Empty;
 
         switch (card.category.categoryName)
         {
             case "Seller":
-                costText.gameObject.SetActive(true);
-                valueText.gameObject.SetActive(true);
-                costText.text = $"Buy Cost: {card.itemBuyCost}g";
-                // Hide true value until appraised
-                valueText.text = card.valueIsHidden ? "Value: ???" : $"Value: {card.itemTrueValue}g";
-                break;
+                return $"{card.itemBuyCost}g";
 
             case "Buyer":
-                valueText.gameObject.SetActive(true);
-                valueText.text = $"Offers: {card.buyerOfferedPrice}g";
-                costText.gameObject.SetActive(true);
-                costText.text = $"Wants: {card.buyerDesiredItemType}";
-                break;
+                return $"Wants: {card.buyerDesiredItemType}";
 
             case "Conservator":
-                valueText.gameObject.SetActive(true);
-                valueText.text = $"Accuracy: {Mathf.RoundToInt(card.appraisalAccuracy * 100)}%";
-                break;
+                return $"Expert: {card.conservatorExpertise}";
 
             case "Contractor":
-                costText.gameObject.SetActive(true);
-                valueText.gameObject.SetActive(true);
-                // Display the enum type as a readable string
-                costText.text = $"Upgrades: {card.upgradeType}";
-                valueText.text = card.upgradeType == ContractorUpgradeType.UnlockCategory
-                    ? $"Unlocks: {(card.categoryToUnlock != null ? card.categoryToUnlock.categoryName : "?")}"
-                    : card.upgradeType == ContractorUpgradeType.HireStaff
-                        ? $"Identifies: {card.staffIdentifiesItemType}"
-                        : $"Amount: +{card.upgradeAmount}";
-                break;
+                return card.cardDescription.Length > 40
+                    ? card.cardDescription.Substring(0, 40) + "..."
+                    : card.cardDescription;
 
             case "Freelancer":
-                costText.gameObject.SetActive(true);
-                valueText.gameObject.SetActive(true);
-                costText.text = $"Returns in: {card.roundsToReturn} rounds";
-                valueText.text = $"Item value: {card.freelancerMinItemValue}-{card.freelancerMaxItemValue}g";
-                break;
+                return card.cardDescription.Length > 40
+                    ? card.cardDescription.Substring(0, 40) + "..."
+                    : card.cardDescription;
 
-                // ── Add new cases here as you introduce new card categories ──
+            // ── Add new cases here ──
+            default:
+                return string.Empty;
         }
     }
 
     /// <summary>
-    /// Returns the banner colour associated with a given category name.
-    /// Add new entries here when you add new categories.
+    /// Called when the player clicks anywhere on the card.
+    /// Toggles staged selection state via RoundManager.
+    /// Card effects are NOT executed here — deferred to Next Round.
     /// </summary>
-    private Color GetCategoryColour(string categoryName)
+    private void OnCardClicked()
     {
-        switch (categoryName)
+        if (isStaged)
         {
-            case "Seller": return sellerColour;
-            case "Buyer": return buyerColour;
-            case "Conservator": return conservatorColour;
-            case "Contractor": return contractorColour;
-            case "Freelancer": return freelancerColour;
-            default: return Color.grey;
+            // Already staged — unstage it
+            bool unstaged = RoundManager.Instance.UnstageCard(assignedCard);
+            if (unstaged)
+                SetSelectedVisual(false);
         }
+        else
+        {
+            // Not staged — try to stage it
+            bool staged = RoundManager.Instance.StageCard(assignedCard);
+            if (staged)
+                SetSelectedVisual(true);
+        }
+
+        CardUIManager.Instance.UpdateHUD();
     }
 
     /// <summary>
-    /// Called when the player clicks the Select button on this card.
-    /// Passes the selection attempt to RoundManager.
-    /// </summary>
-    private void OnSelectButtonClicked()
-    {
-        if (isSelected) return;
-
-        // Route through the interaction manager first.
-        // The interaction manager will call RoundManager.TrySelectCard() itself
-        // once any popups are confirmed, and will call SetSelectedVisual() on this card.
-        CardInteractionManager.Instance.HandleCardSelected(assignedCard, this);
-    }
-
-    /// <summary>
-    /// Enables or disables the selected overlay and locks the button.
+    /// Shows or hides the selected overlay to reflect staged state.
+    /// Called by OnCardClicked and by CardUIManager after round resets.
     /// </summary>
     public void SetSelectedVisual(bool selected)
     {
-        isSelected = selected;
+        isStaged = selected;
 
         if (selectedOverlay != null)
             selectedOverlay.SetActive(selected);
 
-        // Disable the button after selection so it can't be clicked again
-        selectButton.interactable = !selected;
+        // Notify visual controller so staged raise is applied
+        CardVisualController visualController = GetComponentInChildren<CardVisualController>();
+        if (visualController != null)
+            visualController.SetStaged(selected);
     }
 }

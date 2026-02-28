@@ -1,32 +1,46 @@
+/*
+ * ============================================================
+ * SCRIPT:      CardUIManager.cs
+ * GAMEOBJECT:  UIManager
+ * ------------------------------------------------------------
+ * FUNCTION:
+ *   Manages the card display area each round. Subscribes to
+ *   RoundManager events to clear and respawn cards. Handles
+ *   the Next Round button — which now calls
+ *   RoundManager.ProcessAndEndRound() to execute all staged
+ *   selections before advancing. Updates the HUD to show
+ *   how many cards are currently staged.
+ * ------------------------------------------------------------
+ * REFERENCED BY:
+ *   CardInteractionManager -- calls UpdateHUD() after card
+ *                          interaction popups complete
+ * ------------------------------------------------------------
+ * METHODS CALLED BY OTHER SCRIPTS:
+ *   UpdateHUD()         --> Called by CardUI.OnCardClicked()
+ *                          and CardInteractionManager after
+ *                          any interaction
+ * ------------------------------------------------------------
+ * OPTIMISATION NOTES:
+ *   Start() -- hooks button and subscribes to events.
+ *   No Update(). Uses Instantiate/Destroy per round — consider
+ *   object pooling if card counts grow large.
+ * ============================================================
+ */
+
 using System.Collections.Generic;
 using UnityEngine;
-using TMPro;
 using UnityEngine.UI;
+using TMPro;
 
-/// <summary>
-/// Manages the card display area each round.
-/// Spawns card prefab instances, populates them with CardData,
-/// and clears them when moving to the next round.
-/// Also updates the HUD text fields.
-/// </summary>
 public class CardUIManager : MonoBehaviour
 {
     public static CardUIManager Instance { get; private set; }
 
     [Header("References — assign in Inspector")]
-    [Tooltip("The card prefab with CardUI script attached.")]
     public GameObject cardPrefab;
-
-    [Tooltip("The horizontal layout group that holds the 4 card slots.")]
     public Transform cardRowParent;
-
-    [Tooltip("HUD text showing current round number.")]
     public TextMeshProUGUI roundText;
-
-    [Tooltip("HUD text showing selections remaining.")]
     public TextMeshProUGUI selectionsText;
-
-    [Tooltip("The Next Round button.")]
     public Button nextRoundButton;
 
     [Header("Runtime State")]
@@ -40,20 +54,14 @@ public class CardUIManager : MonoBehaviour
 
     private void Start()
     {
-        // Hook up the Next Round button
         nextRoundButton.onClick.AddListener(OnNextRoundClicked);
 
-        // Subscribe to RoundManager events
         RoundManager.Instance.onRoundStart.AddListener(OnRoundStart);
-        RoundManager.Instance.onCardSelected.AddListener(OnCardSelected);
+        RoundManager.Instance.onStagedSelectionsChanged.AddListener(UpdateHUD);
 
-        // Trigger initial display
         OnRoundStart();
     }
 
-    /// <summary>
-    /// Called at the start of each round. Clears old cards and spawns new ones.
-    /// </summary>
     private void OnRoundStart()
     {
         ClearCards();
@@ -61,29 +69,18 @@ public class CardUIManager : MonoBehaviour
         UpdateHUD();
     }
 
-    /// <summary>
-    /// Destroys all current card UI instances.
-    /// </summary>
     private void ClearCards()
     {
         foreach (CardUI card in activeCardUIs)
-        {
-            if (card != null)
-                Destroy(card.gameObject);
-        }
+            if (card != null) Destroy(card.gameObject);
+
         activeCardUIs.Clear();
     }
 
-    /// <summary>
-    /// Spawns one card prefab per card in the current round and populates it.
-    /// </summary>
     private void SpawnCards()
     {
-        List<CardData> roundCards = RoundManager.Instance.currentRoundCards;
-
-        foreach (CardData cardData in roundCards)
+        foreach (CardData cardData in RoundManager.Instance.currentRoundCards)
         {
-            // Instantiate under the card row parent so the layout group positions it
             GameObject cardObj = Instantiate(cardPrefab, cardRowParent);
             CardUI cardUI = cardObj.GetComponent<CardUI>();
 
@@ -94,13 +91,19 @@ public class CardUIManager : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning("[CardUIManager] Card prefab is missing a CardUI component.");
+                Debug.LogWarning("[CardUIManager] Card prefab missing CardUI component.");
             }
         }
+
+        // Force the layout group to immediately calculate positions
+        // so CardVisualController can cache correct rest positions
+        UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(
+            cardRowParent.GetComponent<RectTransform>()
+        );
     }
 
     /// <summary>
-    /// Updates the round number and selections remaining text in the HUD.
+    /// Updates the round number and staged selection count in the HUD.
     /// </summary>
     public void UpdateHUD()
     {
@@ -108,26 +111,15 @@ public class CardUIManager : MonoBehaviour
             roundText.text = $"Round: {RoundManager.Instance.currentRound}";
 
         if (selectionsText != null)
-        {
-            int remaining = RoundManager.Instance.maxSelectionsPerRound
-                            - RoundManager.Instance.selectionsThisRound;
-            selectionsText.text = $"Selections: {RoundManager.Instance.selectionsThisRound} / {RoundManager.Instance.maxSelectionsPerRound}";
-        }
+            selectionsText.text = $"Selected: {RoundManager.Instance.stagedCards.Count} / {RoundManager.Instance.maxSelectionsPerRound}";
     }
 
     /// <summary>
-    /// Called whenever a card is selected — updates the HUD counter.
-    /// </summary>
-    private void OnCardSelected()
-    {
-        UpdateHUD();
-    }
-
-    /// <summary>
-    /// Called when the Next Round button is pressed.
+    /// Called when the Next Round button is clicked.
+    /// Triggers processing of all staged card selections before advancing.
     /// </summary>
     private void OnNextRoundClicked()
     {
-        RoundManager.Instance.EndRound();
+        RoundManager.Instance.ProcessAndEndRound();
     }
 }

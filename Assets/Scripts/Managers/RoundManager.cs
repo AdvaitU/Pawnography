@@ -1,40 +1,74 @@
-﻿using System.Collections.Generic;
+﻿/*
+ * ============================================================
+ * SCRIPT:      RoundManager.cs
+ * GAMEOBJECT:  GameManager
+ * ------------------------------------------------------------
+ * FUNCTION:
+ *   Manages round progression. Tracks staged (pending) card
+ *   selections that the player can toggle freely before
+ *   confirming via the Next Round button. When Next Round is
+ *   clicked, CardUIManager triggers ProcessAndEndRound() which
+ *   passes all staged selections to CardInteractionManager for
+ *   execution, then advances to the next round.
+ *   Boss rounds are detected every N rounds.
+ * ------------------------------------------------------------
+ * REFERENCED BY:
+ *   ShopManager         -- calls StartNewRound() after syncing
+ *                          stats; sets cardsPerRound on upgrade
+ *   CardUIManager       -- calls ProcessAndEndRound() on Next
+ *                          Round button click; reads staged
+ *                          selections to update HUD
+ *   CardInteractionManager -- calls StageCard() and UnstageCard()
+ *                          during card toggle interactions;
+ *                          reads stagedCards on confirmation
+ *   FreelancerManager   -- subscribes to onRoundStart to tick
+ *                          freelancer countdowns
+ * ------------------------------------------------------------
+ * METHODS CALLED BY OTHER SCRIPTS:
+ *   StartNewRound()       --> Called by ShopManager.Start()
+ *   ProcessAndEndRound()  --> Called by CardUIManager when
+ *                            Next Round button is clicked
+ *   StageCard()           --> Called by CardInteractionManager
+ *                            when a card is toggled on
+ *   UnstageCard()         --> Called by CardInteractionManager
+ *                            when a card is toggled off
+ *   TriggerGameOver()     --> Called when boss round failed
+ * ------------------------------------------------------------
+ * OPTIMISATION NOTES:
+ *   Awake() -- singleton setup. Start() intentionally empty.
+ *   No Update(). All logic is event-driven.
+ * ============================================================
+ */
+
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
-/// <summary>
-/// Manages round progression, card selection limits, and boss round detection.
-/// Attach to the same persistent GameObject as CardDatabase.
-/// </summary>
 public class RoundManager : MonoBehaviour
 {
     public static RoundManager Instance { get; private set; }
 
     [Header("Round Settings")]
-    [Tooltip("How many cards are dealt each round.")]
     public int cardsPerRound = 4;
-
-    [Tooltip("Maximum cards the player can select per round before auto-advancing.")]
     public int maxSelectionsPerRound = 2;
-
-    [Tooltip("Every N rounds, a boss (auction) round occurs.")]
     public int bossRoundInterval = 8;
 
     [Header("Runtime State — view in Play Mode")]
     public int currentRound = 0;
-    public int selectionsThisRound = 0;
     public bool isBossRound = false;
 
-    [Header("Current Round Cards")]
+    [Header("Current Round")]
     public List<CardData> currentRoundCards = new List<CardData>();
-    public List<CardData> selectedCards = new List<CardData>();
 
-    // ── Events other systems can subscribe to ──
+    [Tooltip("Cards the player has toggled on this round but not yet confirmed. " +
+             "Confirmed when Next Round is clicked.")]
+    public List<CardData> stagedCards = new List<CardData>();
+
     [Header("Events")]
     public UnityEvent onRoundStart;
     public UnityEvent onRoundEnd;
     public UnityEvent onBossRoundStart;
-    public UnityEvent onCardSelected;
+    public UnityEvent onStagedSelectionsChanged; // Fired when staged list changes — UI listens to update HUD
     public UnityEvent onGameOver;
 
     private void Awake()
@@ -45,33 +79,26 @@ public class RoundManager : MonoBehaviour
 
     private void Start()
     {
-        // First round is now started by ShopManager after it finishes
-        // syncing all stats, to avoid initialisation order issues.
-        // See ShopManager.Start()
+        // First round triggered by ShopManager after stat sync
     }
 
     /// <summary>
-    /// Advances to the next round. Called by the "Next Round" button or automatically
-    /// after the player selects their maximum number of cards.
+    /// Begins a new round. Clears staged selections and draws new cards.
     /// </summary>
     public void StartNewRound()
     {
         currentRound++;
-        selectionsThisRound = 0;
-        selectedCards.Clear();
+        stagedCards.Clear();
 
-        // Determine if this is a boss round
         isBossRound = (currentRound % bossRoundInterval == 0);
 
         if (isBossRound)
         {
-            Debug.Log($"[RoundManager] BOSS ROUND {currentRound} — Auction begins!");
+            Debug.Log($"[RoundManager] BOSS ROUND {currentRound}");
             onBossRoundStart?.Invoke();
-            // Boss round logic will be handled separately — hook into onBossRoundStart
         }
         else
         {
-            // Draw 4 new cards from the database
             currentRoundCards = CardDatabase.Instance.DrawRoundCards(cardsPerRound);
             Debug.Log($"[RoundManager] Round {currentRound} started. Drew {currentRoundCards.Count} cards.");
             onRoundStart?.Invoke();
@@ -79,84 +106,74 @@ public class RoundManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Called when the player clicks on a card to select it.
-    /// Returns true if the selection was accepted.
+    /// Stages a card as a pending selection. Called when the player clicks an unselected card.
+    /// Returns true if the card was successfully staged.
     /// </summary>
-    public bool TrySelectCard(CardData card)
+    public bool StageCard(CardData card)
     {
-        // Guard: can't select if already at max or card not in current round
-        if (selectionsThisRound >= maxSelectionsPerRound)
+        if (stagedCards.Contains(card))
         {
-            Debug.Log("[RoundManager] Already at max selections for this round.");
+            Debug.Log($"[RoundManager] '{card.cardName}' is already staged.");
             return false;
         }
 
-        if (!currentRoundCards.Contains(card))
+        if (stagedCards.Count >= maxSelectionsPerRound)
         {
-            Debug.LogWarning("[RoundManager] Attempted to select a card not in the current round.");
+            Debug.Log($"[RoundManager] Max selections ({maxSelectionsPerRound}) already staged.");
             return false;
         }
 
-        if (selectedCards.Contains(card))
-        {
-            Debug.Log("[RoundManager] Card already selected.");
-            return false;
-        }
-
-        selectedCards.Add(card);
-        selectionsThisRound++;
-
-        Debug.Log($"[RoundManager] Selected card: {card.cardName} ({selectionsThisRound}/{maxSelectionsPerRound})");
-        onCardSelected?.Invoke();
-
-        // Auto-advance if max selections reached
-        if (selectionsThisRound >= maxSelectionsPerRound)
-        {
-            Debug.Log("[RoundManager] Max selections reached — advancing to next round.");
-            EndRound();
-        }
-
+        stagedCards.Add(card);
+        Debug.Log($"[RoundManager] Staged '{card.cardName}'. ({stagedCards.Count}/{maxSelectionsPerRound})");
+        onStagedSelectionsChanged?.Invoke();
         return true;
     }
 
     /// <summary>
-    /// Ends the current round and triggers the next one.
-    /// Called automatically at max selections, or manually via the Next Round button.
+    /// Removes a card from the staged selection. Called when the player clicks a selected card.
     /// </summary>
-    public void EndRound()
+    public bool UnstageCard(CardData card)
     {
+        if (!stagedCards.Contains(card))
+        {
+            Debug.Log($"[RoundManager] '{card.cardName}' is not staged.");
+            return false;
+        }
+
+        stagedCards.Remove(card);
+        Debug.Log($"[RoundManager] Unstaged '{card.cardName}'. ({stagedCards.Count}/{maxSelectionsPerRound})");
+        onStagedSelectionsChanged?.Invoke();
+        return true;
+    }
+
+    /// <summary>
+    /// Called by CardUIManager when Next Round is clicked.
+    /// Passes all staged cards to CardInteractionManager for execution,
+    /// then advances to the next round.
+    /// </summary>
+    public void ProcessAndEndRound()
+    {
+        Debug.Log($"[RoundManager] Processing {stagedCards.Count} staged selection(s).");
+
+        // Process a copy of the list since interactions may modify it
+        List<CardData> toProcess = new List<CardData>(stagedCards);
+
+        foreach (CardData card in toProcess)
+        {
+            CardInteractionManager.Instance.ExecuteCardEffect(card);
+        }
+
+        stagedCards.Clear();
         onRoundEnd?.Invoke();
         StartNewRound();
     }
 
     /// <summary>
-    /// Call this when the player fails a boss round auction threshold.
+    /// Call when the player fails a boss round auction threshold.
     /// </summary>
     public void TriggerGameOver()
     {
         Debug.Log("[RoundManager] GAME OVER.");
         onGameOver?.Invoke();
-    }
-
-    /// <summary>
-    /// Cancels a previously accepted card selection, refunding the selection count.
-    /// Called if the player backs out of a confirmation popup or cannot complete the action.
-    /// </summary>
-    public void CancelCardSelection(CardData card)
-    {
-        if (!selectedCards.Contains(card))
-        {
-            Debug.LogWarning("[RoundManager] Tried to cancel a selection that was never made.");
-            return;
-        }
-
-        selectedCards.Remove(card);
-        selectionsThisRound--;
-        selectionsThisRound = Mathf.Max(0, selectionsThisRound); // Safety clamp
-
-        Debug.Log($"[RoundManager] Selection cancelled for '{card.cardName}'. ({selectionsThisRound}/{maxSelectionsPerRound})");
-
-        // Notify UI to update the HUD counter
-        onCardSelected?.Invoke();
     }
 }
