@@ -49,6 +49,7 @@ public class HoverPopupUI : MonoBehaviour
     public TextMeshProUGUI hoverConditionText;
     public TextMeshProUGUI hoverExtraInfoText;
     public Image hoverCategoryBanner;
+    public Image hoverCardArt;
 
     [Tooltip("Reference to the Canvas for screen space calculations.")]
     public Canvas parentCanvas;
@@ -100,6 +101,7 @@ public class HoverPopupUI : MonoBehaviour
         hoverCardNameText.text = card.cardName;
         hoverCategoryText.text = card.category != null ? card.category.categoryName : "Unknown";
         hoverDescriptionText.text = card.cardDescription;
+        hoverCardArt.sprite = card.cardArt;
 
         // Reset optional fields
         hoverCostText.gameObject.SetActive(false);
@@ -118,6 +120,7 @@ public class HoverPopupUI : MonoBehaviour
                 hoverCostText.text = $"Buy Cost: {card.itemBuyCost}g";
                 hoverValueText.text = card.valueIsHidden ? "Value: ???" : $"Value: {card.itemTrueValue}g";
                 hoverConditionText.text = $"Condition: {card.itemCondition}";
+                hoverCategoryBanner.color = Color.blue;
                 break;
 
             case "Buyer":
@@ -125,6 +128,7 @@ public class HoverPopupUI : MonoBehaviour
                 hoverValueText.gameObject.SetActive(true);
                 hoverCostText.text = $"Wants: {card.buyerDesiredItemType}";
                 hoverValueText.text = $"Offers: {card.buyerOfferedPrice}g";
+                hoverCategoryBanner.color = Color.green;
                 break;
 
             case "Conservator":
@@ -134,24 +138,32 @@ public class HoverPopupUI : MonoBehaviour
                 hoverCostText.text = $"Expertise: {card.conservatorExpertise}";
                 hoverValueText.text = $"Appraisal Level: +{card.appraisalLevel} Condition";
                 hoverExtraInfoText.text = $"Accuracy: {Mathf.RoundToInt(card.appraisalAccuracy * 100)}%";
+                hoverCategoryBanner.color = Color.magenta;
                 break;
 
             case "Contractor":
                 hoverCostText.gameObject.SetActive(true);
                 hoverValueText.gameObject.SetActive(true);
+                hoverExtraInfoText.gameObject.SetActive(true);
                 hoverCostText.text = $"Upgrades: {card.upgradeType}";
                 hoverValueText.text = card.upgradeType == ContractorUpgradeType.UnlockCategory
                     ? $"Unlocks: {(card.categoryToUnlock != null ? card.categoryToUnlock.categoryName : "?")}"
                     : card.upgradeType == ContractorUpgradeType.HireStaff
                         ? $"Identifies: {card.staffIdentifiesItemType}"
                         : $"Amount: +{card.upgradeAmount}";
+                hoverExtraInfoText.text = $"Cost: {EconomyManager.Instance.GetContractorCost(card)}g";
+                hoverCategoryBanner.color = Color.yellow;
                 break;
 
             case "Freelancer":
                 hoverCostText.gameObject.SetActive(true);
                 hoverValueText.gameObject.SetActive(true);
+                hoverExtraInfoText.gameObject.SetActive(true);
                 hoverCostText.text = $"Returns in: {card.roundsToReturn} rounds";
-                hoverValueText.text = $"Item value: {card.freelancerMinItemValue}-{card.freelancerMaxItemValue}g";
+                hoverValueText.text = $"Item value: {card.freelancerMinItemValue}" +
+                                      $"-{card.freelancerMaxItemValue}g";
+                hoverExtraInfoText.text = $"Cost: {EconomyManager.Instance.GetFreelancerCost(card)}g";
+                hoverCategoryBanner.color = Color.black;
                 break;
 
                 // ── Add new cases here as new card categories are introduced ──

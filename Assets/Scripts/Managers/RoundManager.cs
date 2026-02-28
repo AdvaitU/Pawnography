@@ -4,39 +4,36 @@
  * GAMEOBJECT:  GameManager
  * ------------------------------------------------------------
  * FUNCTION:
- *   Manages round progression. Tracks staged (pending) card
- *   selections that the player can toggle freely before
- *   confirming via the Next Round button. When Next Round is
- *   clicked, CardUIManager triggers ProcessAndEndRound() which
- *   passes all staged selections to CardInteractionManager for
- *   execution, then advances to the next round.
+ *   Manages round progression. Tracks staged card selections
+ *   as StagedCardData objects that carry metadata (chosen items
+ *   for buyers, purchase confirmation for sellers). Staged
+ *   selections can be toggled freely before being confirmed
+ *   via the Next Round button. On Next Round, all staged cards
+ *   are passed to CardInteractionManager for execution.
  *   Boss rounds are detected every N rounds.
  * ------------------------------------------------------------
  * REFERENCED BY:
  *   ShopManager         -- calls StartNewRound() after syncing
  *                          stats; sets cardsPerRound on upgrade
  *   CardUIManager       -- calls ProcessAndEndRound() on Next
- *                          Round button click; reads staged
- *                          selections to update HUD
- *   CardInteractionManager -- calls StageCard() and UnstageCard()
- *                          during card toggle interactions;
- *                          reads stagedCards on confirmation
- *   FreelancerManager   -- subscribes to onRoundStart to tick
- *                          freelancer countdowns
+ *                          Round; reads stagedCards for HUD
+ *   CardUI              -- calls StageCard(), UnstageCard(),
+ *                          GetStagedData()
+ *   CardInteractionManager -- reads StagedCardData metadata
+ *                          during ExecuteCardEffect()
+ *   FreelancerManager   -- subscribes to onRoundStart
  * ------------------------------------------------------------
  * METHODS CALLED BY OTHER SCRIPTS:
  *   StartNewRound()       --> Called by ShopManager.Start()
- *   ProcessAndEndRound()  --> Called by CardUIManager when
- *                            Next Round button is clicked
- *   StageCard()           --> Called by CardInteractionManager
- *                            when a card is toggled on
- *   UnstageCard()         --> Called by CardInteractionManager
- *                            when a card is toggled off
- *   TriggerGameOver()     --> Called when boss round failed
+ *   ProcessAndEndRound()  --> Called by CardUIManager
+ *   StageCard()           --> Called by CardUI on click
+ *   UnstageCard()         --> Called by CardUI on deselect
+ *   GetStagedData()       --> Called by CardUI to read metadata
+ *   TriggerGameOver()     --> Called by EconomyManager on fail
  * ------------------------------------------------------------
  * OPTIMISATION NOTES:
  *   Awake() -- singleton setup. Start() intentionally empty.
- *   No Update(). All logic is event-driven.
+ *   No Update().
  * ============================================================
  */
 
@@ -60,15 +57,14 @@ public class RoundManager : MonoBehaviour
     [Header("Current Round")]
     public List<CardData> currentRoundCards = new List<CardData>();
 
-    [Tooltip("Cards the player has toggled on this round but not yet confirmed. " +
-             "Confirmed when Next Round is clicked.")]
-    public List<CardData> stagedCards = new List<CardData>();
+    [Tooltip("Staged card selections with metadata. Confirmed on Next Round.")]
+    public List<StagedCardData> stagedCards = new List<StagedCardData>();
 
     [Header("Events")]
     public UnityEvent onRoundStart;
     public UnityEvent onRoundEnd;
     public UnityEvent onBossRoundStart;
-    public UnityEvent onStagedSelectionsChanged; // Fired when staged list changes — UI listens to update HUD
+    public UnityEvent onStagedSelectionsChanged;
     public UnityEvent onGameOver;
 
     private void Awake()
@@ -82,9 +78,6 @@ public class RoundManager : MonoBehaviour
         // First round triggered by ShopManager after stat sync
     }
 
-    /// <summary>
-    /// Begins a new round. Clears staged selections and draws new cards.
-    /// </summary>
     public void StartNewRound()
     {
         currentRound++;
@@ -100,77 +93,86 @@ public class RoundManager : MonoBehaviour
         else
         {
             currentRoundCards = CardDatabase.Instance.DrawRoundCards(cardsPerRound);
-            Debug.Log($"[RoundManager] Round {currentRound} started. Drew {currentRoundCards.Count} cards.");
+            Debug.Log($"[RoundManager] Round {currentRound} started. " +
+                      $"Drew {currentRoundCards.Count} cards.");
             onRoundStart?.Invoke();
         }
     }
 
     /// <summary>
-    /// Stages a card as a pending selection. Called when the player clicks an unselected card.
-    /// Returns true if the card was successfully staged.
+    /// Stages a card with empty metadata. Called by CardUI on click.
+    /// Returns the new StagedCardData so CardUI can populate metadata.
+    /// Returns null if the card is already staged or the max is reached.
     /// </summary>
-    public bool StageCard(CardData card)
+    public StagedCardData StageCard(CardData card)
     {
-        if (stagedCards.Contains(card))
+        if (GetStagedData(card) != null)
         {
             Debug.Log($"[RoundManager] '{card.cardName}' is already staged.");
-            return false;
+            return null;
         }
 
         if (stagedCards.Count >= maxSelectionsPerRound)
         {
-            Debug.Log($"[RoundManager] Max selections ({maxSelectionsPerRound}) already staged.");
-            return false;
+            Debug.Log($"[RoundManager] Max selections reached.");
+            return null;
         }
 
-        stagedCards.Add(card);
-        Debug.Log($"[RoundManager] Staged '{card.cardName}'. ({stagedCards.Count}/{maxSelectionsPerRound})");
+        StagedCardData staged = new StagedCardData(card);
+        stagedCards.Add(staged);
+        Debug.Log($"[RoundManager] Staged '{card.cardName}'. " +
+                  $"({stagedCards.Count}/{maxSelectionsPerRound})");
         onStagedSelectionsChanged?.Invoke();
-        return true;
+        return staged;
     }
 
     /// <summary>
-    /// Removes a card from the staged selection. Called when the player clicks a selected card.
+    /// Removes a card from the staged list. Returns the removed
+    /// StagedCardData so CardUI can clean up metadata (e.g. free
+    /// a chosen item back to the inventory display).
     /// </summary>
-    public bool UnstageCard(CardData card)
+    public StagedCardData UnstageCard(CardData card)
     {
-        if (!stagedCards.Contains(card))
+        StagedCardData staged = GetStagedData(card);
+        if (staged == null)
         {
             Debug.Log($"[RoundManager] '{card.cardName}' is not staged.");
-            return false;
+            return null;
         }
 
-        stagedCards.Remove(card);
-        Debug.Log($"[RoundManager] Unstaged '{card.cardName}'. ({stagedCards.Count}/{maxSelectionsPerRound})");
+        stagedCards.Remove(staged);
+        Debug.Log($"[RoundManager] Unstaged '{card.cardName}'. " +
+                  $"({stagedCards.Count}/{maxSelectionsPerRound})");
         onStagedSelectionsChanged?.Invoke();
-        return true;
+        return staged;
+    }
+
+    /// <summary>
+    /// Returns the StagedCardData for a given card, or null if not staged.
+    /// </summary>
+    public StagedCardData GetStagedData(CardData card)
+    {
+        return stagedCards.Find(s => s.card == card);
     }
 
     /// <summary>
     /// Called by CardUIManager when Next Round is clicked.
-    /// Passes all staged cards to CardInteractionManager for execution,
-    /// then advances to the next round.
+    /// Executes all staged card effects then advances the round.
     /// </summary>
     public void ProcessAndEndRound()
     {
         Debug.Log($"[RoundManager] Processing {stagedCards.Count} staged selection(s).");
 
-        // Process a copy of the list since interactions may modify it
-        List<CardData> toProcess = new List<CardData>(stagedCards);
+        List<StagedCardData> toProcess = new List<StagedCardData>(stagedCards);
 
-        foreach (CardData card in toProcess)
-        {
-            CardInteractionManager.Instance.ExecuteCardEffect(card);
-        }
+        foreach (StagedCardData staged in toProcess)
+            CardInteractionManager.Instance.ExecuteCardEffect(staged);
 
         stagedCards.Clear();
         onRoundEnd?.Invoke();
         StartNewRound();
     }
 
-    /// <summary>
-    /// Call when the player fails a boss round auction threshold.
-    /// </summary>
     public void TriggerGameOver()
     {
         Debug.Log("[RoundManager] GAME OVER.");

@@ -1,0 +1,304 @@
+﻿/*
+ * ============================================================
+ * SCRIPT:      EconomyManager.cs
+ * GAMEOBJECT:  GameManager
+ * ------------------------------------------------------------
+ * FUNCTION:
+ *   Tracks the player's gold balance and total income earned
+ *   this run. Handles all transactions — purchases, sales,
+ *   and service costs. Enforces affordability checks and
+ *   manages the grace round system when the player cannot
+ *   afford a card. Calculates auto-costs for contractor and
+ *   freelancer cards based on their stats when no manual
+ *   cost is set. Exposes the boss round income threshold
+ *   and escalation logic.
+ * ------------------------------------------------------------
+ * REFERENCED BY:
+ *   CardInteractionManager -- calls TrySpendGold(), AddGold(),
+ *                          CanAfford(), GetContractorCost(),
+ *                          GetFreelancerCost()
+ *   RoundManager           -- calls CheckBossRoundThreshold()
+ *                          when a boss round ends
+ *   CardUI / HoverPopupUI  -- calls GetContractorCost() and
+ *                          GetFreelancerCost() for display
+ * ------------------------------------------------------------
+ * METHODS CALLED BY OTHER SCRIPTS:
+ *   TrySpendGold()         --> Called by CardInteractionManager
+ *                            for purchases and service costs
+ *   AddGold()              --> Called by CardInteractionManager
+ *                            when a sale completes
+ *   CanAfford()            --> Called by CardInteractionManager
+ *                            before executing a card effect
+ *   GetContractorCost()    --> Called by CardInteractionManager,
+ *                            CardUI, HoverPopupUI
+ *   GetFreelancerCost()    --> Called by CardInteractionManager,
+ *                            CardUI, HoverPopupUI
+ *   CheckBossRoundThreshold() --> Called by RoundManager at
+ *                            the end of a boss round
+ *   ResetEconomy()         --> Called on new run start
+ * ------------------------------------------------------------
+ * OPTIMISATION NOTES:
+ *   Awake() -- singleton setup. Start() -- subscribes to
+ *   RoundManager boss round event. No Update().
+ * ============================================================
+ */
+
+using UnityEngine;
+using UnityEngine.Events;
+
+public class EconomyManager : MonoBehaviour
+{
+    public static EconomyManager Instance { get; private set; }
+
+    // ─────────────────────────────────────────────
+    // STARTING VALUES
+    // ─────────────────────────────────────────────
+
+    [Header("Starting Values")]
+    [Tooltip("How much gold the player starts with.")]
+    public int startingGold = 100;
+
+    // ─────────────────────────────────────────────
+    // RUNTIME STATE
+    // ─────────────────────────────────────────────
+
+    [Header("Runtime State — view in Play Mode")]
+    public int currentGold = 0;
+
+    [Tooltip("Total gold earned from sales this run. " +
+             "Used to check boss round income threshold.")]
+    public int totalIncomeThisRun = 0;
+
+    [Tooltip("Total gold earned from sales since the last boss round. " +
+             "Reset after each boss round check.")]
+    public int incomeThisCycle = 0;
+
+    // ─────────────────────────────────────────────
+    // BOSS ROUND THRESHOLD
+    // ─────────────────────────────────────────────
+
+    [Header("Boss Round Threshold")]
+    [Tooltip("Income the player must earn per cycle to pass the first boss round.")]
+    public int baseThreshold = 200;
+
+    [Tooltip("Flat amount added to the threshold after each boss round.")]
+    public int thresholdIncreaseFlat = 50;
+
+    [Tooltip("Multiplier applied to the threshold after each boss round. " +
+             "E.g. 1.1 = threshold grows by 10% each cycle on top of the flat increase.")]
+    public float thresholdScalingMultiplier = 1.1f;
+
+    [Tooltip("Current threshold the player must hit this cycle. " +
+             "Updated after each boss round.")]
+    public int currentThreshold = 0;
+
+    [Tooltip("How many boss rounds have been completed this run.")]
+    public int bossRoundsCompleted = 0;
+
+    // ─────────────────────────────────────────────
+    // AUTO-COST SETTINGS
+    // ─────────────────────────────────────────────
+
+    [Header("Auto-Cost Settings")]
+    [Tooltip("Contractor cost is calculated as upgradeAmount multiplied by this value " +
+             "when contractorCost on the CardData is 0.")]
+    public float contractorCostPerUpgradeUnit = 10f;
+
+    [Tooltip("Freelancer cost is calculated as this percentage of their average item value " +
+             "when freelancerCost on the CardData is 0. E.g. 0.3 = 30% of average value.")]
+    [Range(0f, 1f)] public float freelancerCostPercentage = 0.3f;
+
+
+    // ─────────────────────────────────────────────
+    // EVENTS
+    // ─────────────────────────────────────────────
+
+    [Header("Events")]
+    public UnityEvent onGoldChanged;
+    public UnityEvent onBossRoundPassed;
+    public UnityEvent onBossRoundFailed;
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        Instance = this;
+    }
+
+    private void Start()
+    {
+        currentGold = startingGold;
+        currentThreshold = baseThreshold;
+
+        // Subscribe to boss round event from RoundManager
+        RoundManager.Instance.onBossRoundStart.AddListener(OnBossRoundStarted);
+
+        onGoldChanged?.Invoke();
+        Debug.Log($"[EconomyManager] Starting gold: {currentGold}g. " +
+                  $"First boss round threshold: {currentThreshold}g.");
+    }
+
+    // ─────────────────────────────────────────────
+    // TRANSACTIONS
+    // ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Attempts to spend gold. Returns true if successful, false if insufficient funds.
+    /// Pass a description for debug logging (e.g. "Buy Antique Clock").
+    /// </summary>
+    public bool TrySpendGold(int amount, string description = "")
+    {
+        if (amount <= 0) return true; // Free — always succeeds
+
+        if (currentGold < amount)
+        {
+            Debug.Log($"[EconomyManager] Cannot afford '{description}' " +
+                      $"— costs {amount}g, have {currentGold}g.");
+            return false;
+        }
+
+        currentGold -= amount;
+        Debug.Log($"[EconomyManager] Spent {amount}g on '{description}'. " +
+                  $"Remaining: {currentGold}g.");
+        onGoldChanged?.Invoke();
+        return true;
+    }
+
+    /// <summary>
+    /// Adds gold to the player's balance and tracks it as income.
+    /// Pass a description for debug logging (e.g. "Sold Antique Clock").
+    /// </summary>
+    public void AddGold(int amount, string description = "")
+    {
+        if (amount <= 0) return;
+
+        currentGold += amount;
+        totalIncomeThisRun += amount;
+        incomeThisCycle += amount;
+
+        Debug.Log($"[EconomyManager] Earned {amount}g from '{description}'. " +
+                  $"Balance: {currentGold}g. Cycle income: {incomeThisCycle}g.");
+        onGoldChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Returns true if the player currently has enough gold for the given amount.
+    /// </summary>
+    public bool CanAfford(int amount)
+    {
+        return currentGold >= amount;
+    }
+
+    // ─────────────────────────────────────────────
+    // COST CALCULATORS
+    // ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Returns the gold cost to hire a contractor.
+    /// Uses the manual contractorCost on CardData if set (> 0),
+    /// otherwise auto-calculates from upgradeAmount.
+    /// </summary>
+    public int GetContractorCost(CardData card)
+    {
+        if (card.contractorCost > 0)
+            return card.contractorCost;
+
+        // Auto-calculate based on upgrade type and amount
+        switch (card.upgradeType)
+        {
+            case ContractorUpgradeType.WarehouseSlots:
+            case ContractorUpgradeType.FloorSpace:
+            case ContractorUpgradeType.Reputation:
+                return Mathf.Max(1, Mathf.RoundToInt(card.upgradeAmount
+                       * contractorCostPerUpgradeUnit));
+
+            case ContractorUpgradeType.UnlockCategory:
+            case ContractorUpgradeType.UnlockSubCategory:
+                // Flat cost for unlock contractors — tweak contractorCostPerUpgradeUnit
+                // to scale this, or set contractorCost manually on the asset
+                return Mathf.RoundToInt(contractorCostPerUpgradeUnit * 5f);
+
+            case ContractorUpgradeType.HireStaff:
+                return Mathf.RoundToInt(contractorCostPerUpgradeUnit * 3f);
+
+            default:
+                return 0;
+        }
+    }
+
+    /// <summary>
+    /// Returns the gold cost to send a freelancer out.
+    /// Uses the manual freelancerCost on CardData if set (> 0),
+    /// otherwise auto-calculates as a percentage of average item value.
+    /// </summary>
+    public int GetFreelancerCost(CardData card)
+    {
+        if (card.freelancerCost > 0)
+            return card.freelancerCost;
+
+        int averageValue = (card.freelancerMinItemValue + card.freelancerMaxItemValue) / 2;
+        return Mathf.Max(1, Mathf.RoundToInt(averageValue * freelancerCostPercentage));
+    }
+
+    // ─────────────────────────────────────────────
+    // BOSS ROUND
+    // ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Called by RoundManager when a boss round starts.
+    /// Checks whether the player has met the income threshold this cycle.
+    /// </summary>
+    private void OnBossRoundStarted()
+    {
+        CheckBossRoundThreshold();
+    }
+
+    //// <summary>
+    /// Checks incomeThisCycle against currentThreshold.
+    /// Pass: escalates threshold, resets cycle income.
+    /// Fail: immediate game over — no grace round.
+    /// </summary>
+    public void CheckBossRoundThreshold()
+    {
+        Debug.Log($"[EconomyManager] Boss round check — " +
+                  $"income: {incomeThisCycle}g / threshold: {currentThreshold}g.");
+
+        if (incomeThisCycle >= currentThreshold)
+        {
+            bossRoundsCompleted++;
+
+            int newThreshold = Mathf.RoundToInt(
+                (currentThreshold + thresholdIncreaseFlat) * thresholdScalingMultiplier);
+            currentThreshold = newThreshold;
+            incomeThisCycle = 0;
+
+            Debug.Log($"[EconomyManager] Boss round PASSED. Next threshold: {currentThreshold}g.");
+            onBossRoundPassed?.Invoke();
+        }
+        else
+        {
+            // Immediate game over — no grace round
+            Debug.Log("[EconomyManager] Boss round FAILED — GAME OVER.");
+            onBossRoundFailed?.Invoke();
+            RoundManager.Instance.TriggerGameOver();
+        }
+    }
+
+    // ─────────────────────────────────────────────
+    // RESET
+    // ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Resets all economy state to starting values.
+    /// Call when starting a new run.
+    /// </summary>
+    public void ResetEconomy()
+    {
+        currentGold = startingGold;
+        totalIncomeThisRun = 0;
+        incomeThisCycle = 0;
+        currentThreshold = baseThreshold;
+        bossRoundsCompleted = 0;
+        onGoldChanged?.Invoke();
+        Debug.Log("[EconomyManager] Economy reset.");
+    }
+}

@@ -65,6 +65,18 @@ public class CardVisualController : MonoBehaviour
     [Header("Selected State")]
     public float selectedRaiseAmount = 20f;
 
+    [Header("Spawn Burst")]
+    [Tooltip("How much larger the card scales up to at the peak of the spawn animation.")]
+    public float spawnBurstScale = 1.25f;
+
+    [Tooltip("Total duration of the spawn scale punch in seconds.")]
+    public float spawnBurstDuration = 0.5f;
+
+    private float spawnBurstTimer = 0f;
+
+    // Tracks remaining burst time
+    private float burstTimer = 0f;
+
     // ── Private state ──
     private RectTransform rectTransform;
     private Canvas parentCanvas;
@@ -91,6 +103,9 @@ public class CardVisualController : MonoBehaviour
         // Reset local position to zero — this is our rest position
         // We always animate relative to (0,0,0) local space
         rectTransform.localPosition = Vector3.zero;
+
+        // Trigger spawn burst immediately on Start
+        spawnBurstTimer = spawnBurstDuration;
     }
 
     private void Update()
@@ -171,6 +186,19 @@ public class CardVisualController : MonoBehaviour
     private void UpdateScale()
     {
         float targetScale = isHovered ? hoverScaleMultiplier : 1f;
+
+        // If spawn burst is still active, override scale with punch animation.
+        // Uses a sine curve over the burst duration so it eases in and out cleanly.
+        if (spawnBurstTimer > 0f)
+        {
+            spawnBurstTimer -= Time.deltaTime;
+            float t = 1f - Mathf.Clamp01(spawnBurstTimer / spawnBurstDuration);
+            // Sine curve: starts at 1, peaks at spawnBurstScale at t=0.5, returns to 1
+            float burst = 1f + (spawnBurstScale - 1f) * Mathf.Sin(t * Mathf.PI);
+            currentScale = burst;
+            return;
+        }
+
         currentScale = Mathf.Lerp(currentScale, targetScale, Time.deltaTime * hoverScaleSpeed);
     }
 

@@ -124,7 +124,7 @@ public class PopupManager : MonoBehaviour
     /// Opens a confirmation popup for purchasing an item from a Seller.
     /// onConfirm is called if the player accepts, onCancel if they back out.
     /// </summary>
-    public void OpenSellerConfirmation(CardData card, Action onConfirm, Action onCancel)
+    /*public void OpenSellerConfirmation(CardData card, Action onConfirm, Action onCancel)
     {
         string valueStr = card.valueIsHidden ? "???" : $"{card.itemTrueValue}g";
         OpenPopup(
@@ -138,7 +138,7 @@ public class PopupManager : MonoBehaviour
 
         AddButton("Cancel", () => { ClosePopup(); onCancel(); },
             new Color(0.8f, 0.3f, 0.3f)); // red
-    }
+    }*/
 
     /// <summary>
     /// Opens a popup informing the player their warehouse is full,

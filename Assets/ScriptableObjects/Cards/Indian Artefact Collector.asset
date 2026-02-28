@@ -10,19 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ab2ab7d367e4af345bb77b98e447490a, type: 3}
-  m_Name: Chicken Wig
+  m_Name: Indian Artefact Collector
   m_EditorClassIdentifier: 
-  cardName: Chicken Wig
-  cardDescription: Inspired by Elle's great typo on the day development for Pawnography
-    started, this is a wig for a chicken (as the title says)
+  cardName: 
+  cardDescription: 
   cardArt: {fileID: 0}
-  category: {fileID: 11400000, guid: ec7337ca8c6220c408d85e9608d8c5af, type: 2}
+  category: {fileID: 11400000, guid: 43681f7f90102ef448e8db5c2f096d7a, type: 2}
   subCategory: 
   canSpawn: 1
   spawnWeight: 10
   timesSpawnedThisRun: 0
-  itemBuyCost: 50
-  itemTrueValue: 75
+  itemBuyCost: 0
+  itemTrueValue: 0
   valueIsHidden: 1
   itemCondition: 50
   buyerDesiredItemType: 

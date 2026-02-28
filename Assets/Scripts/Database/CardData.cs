@@ -100,35 +100,25 @@ public class CardData : ScriptableObject
              "match this conservator's expertise. E.g. 0.7 = 70% of full bonus.")]
     [Range(0f, 1f)] public float nonExpertiseMultiplier = 0.7f;
 
-    // ── CONTRACTOR fields ──
     [Header("Contractor Fields")]
-    [Tooltip("Which type of upgrade this contractor applies.")]
     public ContractorUpgradeType upgradeType = ContractorUpgradeType.None;
-
-    [Tooltip("Numeric amount for stat upgrades (e.g. +1 warehouse slot, +5 reputation).")]
     public int upgradeAmount = 0;
-
-    [Tooltip("For UnlockCategory: drag the CardCategory asset to unlock here.")]
     public CardCategory categoryToUnlock;
-
-    [Tooltip("For UnlockSubCategory: the sub-category string to unlock (must match subCategory field on CardData assets).")]
     public string subCategoryToUnlock;
-
-    [Tooltip("For HireStaff: which item type this staff member can auto-identify. " +
-             "Must match the subCategory field on Seller CardData assets exactly. " +
-             "e.g. Antiques, Electronics, Jewellery, Art, Weapons, Collectibles, Books & Documents")]
     public string staffIdentifiesItemType;
 
-    // ── FREELANCER fields ──
+    [Tooltip("Gold cost to hire this contractor. If 0, cost is auto-calculated " +
+             "from upgradeAmount by EconomyManager.")]
+    public int contractorCost = 0;
+
     [Header("Freelancer Fields")]
-    [Tooltip("How many rounds this freelancer takes to return with an item.")]
     public int roundsToReturn = 3;
-
-    [Tooltip("Minimum gold value of item the freelancer might acquire.")]
     public int freelancerMinItemValue = 0;
-
-    [Tooltip("Maximum gold value of item the freelancer might acquire.")]
     public int freelancerMaxItemValue = 0;
+
+    [Tooltip("Gold cost to send this freelancer out. If 0, cost is auto-calculated " +
+             "as a percentage of their average item value by EconomyManager.")]
+    public int freelancerCost = 0;
 
     // ── Add new card-type fields below this line as the game grows ──
 }
