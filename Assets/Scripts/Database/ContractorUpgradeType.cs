@@ -1,10 +1,27 @@
-/// <summary>
-/// All possible upgrade types a Contractor card can apply.
-/// Add new entries here as new contractor types are introduced.
-/// When adding a new type, also add a corresponding case in:
-///   - ShopManager.ApplyUpgrade()
-///   - CardInteractionManager.ApplyContractorUpgrade()
-/// </summary>
+/*
+ * ============================================================
+ * SCRIPT:      ContractorUpgradeType.cs
+ * GAMEOBJECT:  Not present on any GameObject.
+ * ------------------------------------------------------------
+ * FUNCTION:
+ *   Defines the enum used to demarcate contractor type.
+ * ------------------------------------------------------------
+ * REFERENCED BY:
+ *   ShopManager         -- Used in ApplyUpgrade() in a switch 
+ *                          statement
+ *   CardInteractionManager -- In ApplyContractorUpgrade() that 
+ *                             calls the ShopManager to apply 
+ *                             upgrade
+ *  CardData             -- To set upgrade type for Contractor 
+ *                          cards
+ * ------------------------------------------------------------
+ * METHODS CALLED BY OTHER SCRIPTS:   None (data container only)
+ * ------------------------------------------------------------
+ * OPTIMISATION NOTES:
+ *   No runtime methods. Pure data asset.
+ * ============================================================
+ */
+
 public enum ContractorUpgradeType
 {
     None,               // Default / unassigned

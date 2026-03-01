@@ -1,53 +1,89 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// Central database holding all CardCategory and CardData assets.
-/// Attach this to a persistent GameObject (e.g. "GameManager").
-/// Populate the two lists in the Inspector by dragging in your ScriptableObject assets.
-/// </summary>
+/*
+ * ============================================================
+ * SCRIPT:      CardDatabase.cs
+ * GAMEOBJECT:  GameManager
+ * ------------------------------------------------------------
+ * FUNCTION:
+ *   Central registry holding all CardCategory and CardData
+ *   assets. Runs the two-step weighted random spawn algorithm
+ *   (step 1: pick category by weight, step 2: pick card within
+ *   category by weight). Draws a hand of cards each round and
+ *   tracks spawn counts. Resets tracking counters on Awake to
+ *   prevent stale values persisting between Editor Play sessions.
+ * ------------------------------------------------------------
+ * REFERENCED BY:
+ *   RoundManager        -- calls DrawRoundCards() at the start
+ *                          of each round
+ *   ShopManager         -- reads allCards in UnlockSubCategory()
+ *                          and allCategories in Start()
+ *   CardDatabaseEditor  -- reads allCards and allCategories for
+ *                          auto-populate buttons
+ * ------------------------------------------------------------
+ * METHODS CALLED BY OTHER SCRIPTS:
+ *   DrawRoundCards()    --> Called by RoundManager.StartNewRound()
+ *                          to get the hand of cards for a round
+ *   BuildLookup()       --> Called internally on Awake; can be
+ *                          called manually if cards are added
+ *                          at runtime
+ *   ResetAllSpawnTracking() --> Called on Awake to clear stale
+ *                          counters;
+ * ------------------------------------------------------------
+ * OPTIMISATION NOTES:
+ *   Awake() -- builds the category→cards dictionary lookup and
+ *   resets spawn counters. Runs once. No Update().
+ *   BuildLookup() iterates all cards on startup — Could pose 
+ *   problems if the card pool becomes very large (500+)
+ * ============================================================
+ */
+
 public class CardDatabase : MonoBehaviour
 {
-    public static CardDatabase Instance { get; private set; }
 
-    [Header("Database — populate in Inspector")]
-    [Tooltip("Drag all CardCategory ScriptableObject assets here.")]
+    // MEMBERS ==============================================================================================================
+    public static CardDatabase Instance { get; private set; }   // Creates an instance of the CardDatabase in the scene
+
+    [Header("Database — Use Editor Script to Auto-Populate")]
+    [Tooltip("All CardCategory ScriptableObject assets go here." + "" +
+        "Objects not here will be ignored by the game")]
     public List<CardCategory> allCategories = new List<CardCategory>();
 
-    [Tooltip("Drag all CardData ScriptableObject assets here.")]
+    [Tooltip("All CardData ScriptableObject assets go here." +
+        "Objects not here will be ignored by the game")]
     public List<CardData> allCards = new List<CardData>();
 
     // ── Cached lookup: category → cards that belong to it ──
-    private Dictionary<CardCategory, List<CardData>> cardsByCategory;
+    private Dictionary<CardCategory, List<CardData>> cardsByCategory;  // Used in BuildLookup() - Dictionary with CardCategory as keys and Lists of CardData objects by category as the values to optimise the sorting in the later methods.
 
     private void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
-        DontDestroyOnLoad(gameObject);
+        DontDestroyOnLoad(gameObject);  // Puts the GameManager in DontDestroyOnLoad
 
         BuildLookup();
 
-        // Always reset spawn tracking when the game starts.
-        // ScriptableObject values persist between Editor Play sessions,
-        // so stale counters from a previous session can cause spawn issues.
-        ResetAllSpawnTracking();
+        // Always reset spawn tracking when the game starts. ScriptableObject values persist between Editor Play sessions, so stale counters from a previous session can cause spawn issues.
+        ResetAllSpawnTracking();  // Uncomment to make them persist if required.
     }
 
-    /// <summary>
-    /// Builds a fast dictionary lookup from category → list of eligible cards.
-    /// Called once on Awake; call again manually if you add cards at runtime.
-    /// </summary>
+    // METHODS ==============================================================================================================
+
+    // BuildLookup() - Builds a fast dictionary lookup from category → list of eligible cards.
+    // Called once on Awake; Only call again manually if you add cards at runtime (rare case scenario).
+    // Two step process to create Categories as keys and Lists of cards by category as values. Dictionary ensures the second step of the card selection process can use only cards with the right category key to make it a lot more efficient.
     public void BuildLookup()
     {
         cardsByCategory = new Dictionary<CardCategory, List<CardData>>();
 
-        foreach (CardCategory cat in allCategories)
+        foreach (CardCategory cat in allCategories)  // Looks at allCategories and creates List of CardData for each
         {
             cardsByCategory[cat] = new List<CardData>();
         }
 
-        foreach (CardData card in allCards)
+        foreach (CardData card in allCards)      // Looks at all the cards in allCards and adds them to the relevant key in cardsByCategory 
         {
             // Guard against null card entries in the list
             if (card == null)
@@ -67,18 +103,20 @@ public class CardDatabase : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// STEP 1: Picks a category using weighted random selection.
-    /// Only categories with canSpawn = true and spawnWeight > 0 are eligible.
-    /// Returns null if no eligible category exists.
-    /// </summary>
+    // PickRandomCategory() - Step 1 rounds spawning random cards -----------------------------------------------------------------------------
+    // Uses the dictionary created in BuildLookup() to quickly choose random category cards.
+    // Returns a CardCategory for PickRandomCardFromCategory() to use.
+    // This is Step 1 of the 2 step algorithm - Picks a category using weighted random selection.
+    // Only categories with canSpawn = true and spawnWeight > 0 are eligible.
+    // Returns null if no eligible category exists.
     public CardCategory PickRandomCategory()
     {
-        // Build the eligible pool
-        List<CardCategory> eligible = new List<CardCategory>();
-        float totalWeight = 0f;
+        
+        List<CardCategory> eligible = new List<CardCategory>(); // Build the eligible pool for sorting
+        float totalWeight = 0f;   // Since the total weight does not need to add to a 100.
 
-        foreach (CardCategory cat in allCategories)
+        // Creat eligible categories list
+        foreach (CardCategory cat in allCategories)  // Categories are inserted into the Inspector manually or using editor script. Only these categories will be looked at.
         {
             if (cat.canSpawn && cat.spawnWeight > 0f)
             {
@@ -87,16 +125,28 @@ public class CardDatabase : MonoBehaviour
             }
         }
 
+        // Log warning if no categories are eligible i.e. none of them have a spawn rate above 0. 
         if (eligible.Count == 0)
         {
             Debug.LogWarning("[CardDatabase] No eligible categories to spawn from.");
             return null;
         }
 
-        // Weighted random roll
+        // This is the random roll - Step 1 of the algorithm. (Weighted random roll)
         float roll = Random.Range(0f, totalWeight);
         float cumulative = 0f;
 
+        // Weighted Roll Explanation -------------------------------------------------
+        // For each eligible category, spawn weight is added to cumulative. If the random roll is less than (or equal to) the cumulative so far, 
+        // For example, there are 5 categories with each having a spawn weight of 20f. The random roll is 15f. For the first category, the roll < cumulative so far, so it is returned.
+        // If instead the roll is 80f, then the first 3 categories won't be returned at all - Only the 4th one will be. 
+        // Hence if all spawn weights are equal, there is actually a random 1/5 chance for each category to be returned.
+
+        // If instead, the 5 categories have spawn weights of 10f, 20f, 30f, 40f, and 50f respectively, the roll will be bwtween 0f and 150f.
+        // If the roll is 5f, the first category will be returned. But on a scale from 0f to 150f, the chance of the roll being under 10f is 1/15.
+
+        // So the categories effectively creates stacks of windows based on their weight. The higher the spawn weight, the larger the window. 
+        // And because roll gives an equal chance if spawning anywhere in the total weight window, the larger each category's window, the higher the rate of it spawning.
         foreach (CardCategory cat in eligible)
         {
             cumulative += cat.spawnWeight;
@@ -104,18 +154,17 @@ public class CardDatabase : MonoBehaviour
                 return cat;
         }
 
-        // Fallback (should not normally be reached)
-        return eligible[eligible.Count - 1];
+        return eligible[^1]; // Fallback (should not normally be reached)
     }
 
-    /// <summary>
-    /// STEP 2: Given a category, picks a specific card using weighted random selection.
-    /// Only cards with canSpawn = true and spawnWeight > 0 are eligible.
-    /// Returns null if no eligible card exists in the category.
-    /// </summary>
+    // PickRandomCardFromCategory() - Step 2 of the algorithm once category is chosen --------------------------------------------------------------
+    // Given a category, picks a specific card using weighted random selection.
+    // Only cards with canSpawn = true and spawnWeight > 0 are eligible.
+    // Returns null if no eligible card exists in the category.
+    // Called using the CardCategory chosen in Step 1 as an argument.
     public CardData PickRandomCardFromCategory(CardCategory category)
     {
-        if (!cardsByCategory.ContainsKey(category))
+        if (!cardsByCategory.ContainsKey(category))    // Failsafe - If no cards of chosen category are present in the Dictionary i.e. Dictionary does not have a key of that CardCategory, return null and log a warning.
         {
             Debug.LogWarning($"[CardDatabase] Category '{category.categoryName}' not found in lookup.");
             return null;
@@ -124,6 +173,7 @@ public class CardDatabase : MonoBehaviour
         List<CardData> eligible = new List<CardData>();
         float totalWeight = 0f;
 
+        // Create a list of eligible cards from the dictionary
         foreach (CardData card in cardsByCategory[category])
         {
             if (card.canSpawn && card.spawnWeight > 0f)
@@ -133,12 +183,13 @@ public class CardDatabase : MonoBehaviour
             }
         }
 
-        if (eligible.Count == 0)
+        if (eligible.Count == 0)  // Failsafe
         {
             Debug.LogWarning($"[CardDatabase] No eligible cards in category '{category.categoryName}'.");
             return null;
         }
 
+        // Same weighted roll as Category selection method
         float roll = Random.Range(0f, totalWeight);
         float cumulative = 0f;
 
@@ -152,10 +203,10 @@ public class CardDatabase : MonoBehaviour
         return eligible[eligible.Count - 1];
     }
 
-    /// <summary>
-    /// Convenience method that runs both steps and returns a single CardData.
-    /// Returns null if anything fails.
-    /// </summary>
+    // PickRandomCard() ------------------------------------------------------------------------
+    // Convenience method that simply runs the above two methods one by one
+    // Failsafe to return null if no category is chosen by PickRandomCategory
+    // Can be called as many times as the cards to spawn by DrawRoundCards(noOfCards)
     public CardData PickRandomCard()
     {
         CardCategory category = PickRandomCategory();
@@ -163,14 +214,15 @@ public class CardDatabase : MonoBehaviour
         return PickRandomCardFromCategory(category);
     }
 
-    /// <summary>
-    /// Draws a set of cards for a new round. Attempts to avoid duplicates.
-    /// </summary>
-    /// <param name="count">Number of cards to draw (default 4).</param>
-    public List<CardData> DrawRoundCards(int count = 4)
+    // DrawRoundCards() --------------------------------------------------------------------------
+    // Calls PickRandomCard n times with n being the int count supplied to it as a parameter.
+    // Returns a list of CardData objects to then be rendered.
+    // Called by RoundManager() who then supplies CardData objects to UI and Interaction Handlers as well
+    // Default count is 3 i.e. starting count of the game.
+    public List<CardData> DrawRoundCards(int count = 3)
     {
         List<CardData> drawn = new List<CardData>();
-        int maxAttempts = count * 10;
+        int maxAttempts = count * 10;   // Failsafe - How many attempts will be made to draw cards. Increase or make method maxAttempts agnostic to always draw cards.
         int attempts = 0;
 
         // Count how many eligible cards exist in total
@@ -183,7 +235,7 @@ public class CardDatabase : MonoBehaviour
             attempts++;
             CardData card = PickRandomCard();
 
-            if (card == null)
+            if (card == null)  // Failsafe
             {
                 Debug.LogWarning("[CardDatabase] PickRandomCard() returned null.");
                 break;
@@ -215,9 +267,8 @@ public class CardDatabase : MonoBehaviour
         return drawn;
     }
 
-    /// <summary>
-    /// Resets all spawn tracking counters — call this when starting a new run.
-    /// </summary>
+    // ResetAllSpawnTracking -------------------------------------------------------
+    // Resets the totalSpawnedThisRun to 0 in Awake() i.e. when new run begins
     public void ResetAllSpawnTracking()
     {
         foreach (CardCategory cat in allCategories)

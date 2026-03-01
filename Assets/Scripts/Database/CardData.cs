@@ -8,14 +8,10 @@
  *              Assets/ScriptableObjects/Cards/
  * ------------------------------------------------------------
  * FUNCTION:
- *   Defines all data for a single card — identity, category,
- *   spawn settings, and type-specific fields for Seller, Buyer,
- *   Conservator, Contractor, and Freelancer cards. One asset
- *   per card. All card-specific parameters other systems need
- *   are read directly from this asset.
+ *   Defines all the data for Card types
  * ------------------------------------------------------------
  * REFERENCED BY:
- *   CardDatabase        -- stored in allCards list, read during
+ *   CardData            -- stored in allCards list, read during
  *                          spawn selection
  *   CardUI              -- reads display fields in Populate()
  *                          and PopulateHover()
@@ -37,7 +33,9 @@
 [CreateAssetMenu(fileName = "NewCard", menuName = "PawnShop/Card Data")]
 public class CardData : ScriptableObject
 {
-    [Header("Identity")]
+    // GENERAL SCOPE  MEMBERS ==============================================================================================================
+
+    [Header("General Scope")]
     public string cardName;
     [TextArea] public string cardDescription;
     public Sprite cardArt;
@@ -51,22 +49,26 @@ public class CardData : ScriptableObject
     public string subCategory;
 
     [Header("Spawning")]
-    [Tooltip("If false, this specific card will never spawn, regardless of category settings.")]
+    [Tooltip("Can be set false to lock card spawning, and true to unlock it")]
     public bool canSpawn = true;
 
-    [Tooltip("Relative weight within its category for spawn selection.")]
+    [Tooltip("Percentage-ish relative weight within its category for spawn selection. Does not need to add up to 100")]
     [Range(0f, 100f)] public float spawnWeight = 10f;
 
     [Header("Tracking (Runtime)")]
     public int timesSpawnedThisRun = 0;
 
-    // ── SELLER specific fields ──
-    [Header("Seller / Item Fields")]
-    [Tooltip("If this card offers an item for sale, set its base buy cost here.")]
+    // CATEGORY SPECIFIC MEMBERS ==============================================================================================================
+
+
+    // ── SELLER specific fields -------------------------------------------------------------------
+    // Cards that offer items to buy in exchange for money instantly
+    [Header("Seller/Item Card Fields")]
+    [Tooltip("What it costs to buy the item when it is presented")]
     public int itemBuyCost = 0;
-    [Tooltip("The estimated resale value of the item. May be hidden until appraised.")]
+    [Tooltip("What is the true value of an item - can be higher or lower or the same as buy cost")]
     public int itemTrueValue = 0;
-    [Tooltip("Whether the item's true value is hidden until a conservator/expert appraises it.")]
+    [Tooltip("Should the value be hidden when the card is presented as a Seller card")]
     public bool valueIsHidden = true;
 
     [Tooltip("Condition of the item on a scale of 0-100. " +
@@ -74,18 +76,27 @@ public class CardData : ScriptableObject
     [Range(0, 100)] public int itemCondition = 50;
 
 
-    // ── BUYER specific fields ──
-    [Header("Buyer Fields")]
+    // ── BUYER specific fields -------------------------------------------------------------------
+    // Cards that offer money in exchange for items held in the warehouse instantly
+    [Header("Buyer Card Fields")]
     [Tooltip("What sub-category of item this buyer is looking for.")]
     public string buyerDesiredItemType;
 
     [Tooltip("How much this buyer will pay for the right item.")]
-    public int buyerOfferedPrice = 0;
+    public int buyerOfferedPrice = 0;   // Deprecated - but kept in to not break functionality - You know how it is :(
 
-    // ── CONSERVATOR / EXPERT fields ──
-    [Header("Conservator / Expert Fields")]
+    [Tooltip("Percentage increase for the right category of item")]
+    [Range(0, 100)] public int buyerInterestPercentage = 30;           // Buyer will offer 30% more (i.e. 130% of) the price quoted
+
+    [Tooltip("Percentage decrease for wrong category of item")]
+    [Range(0, 100)] public int buyerDisinterestPercentage = 60;        // Buyer will offer 60% less (i.e. 40%) of the price quoted
+
+
+    // ── CONSERVATOR / EXPERT fields ----------------------------------------------------------------
+    // Cards that identify or upgrade the value of items held in the warehouse
+    [Header("Conservator/Expert Card Fields")]
     [Tooltip("Accuracy of this expert's appraisal as a 0-1 multiplier (1 = perfect).")]
-    [Range(0f, 1f)] public float appraisalAccuracy = 1f;
+    [Range(0f, 1f)] public float appraisalAccuracy = 1f;    // Applied as a normalised percentage increase on item value
 
     [Tooltip("The item sub-category this conservator specialises in " +
              "(e.g. Antiques, Jewellery). Full condition bonus applied " +
@@ -94,31 +105,44 @@ public class CardData : ScriptableObject
 
     [Tooltip("How much this conservator raises an item's condition " +
              "when the item matches their expertise sub-category.")]
-    public int appraisalLevel = 10;
+    [Range(0, 100)] public int appraisalLevel = 10;
 
     [Tooltip("Multiplier applied to appraisalLevel when the item does NOT " +
-             "match this conservator's expertise. E.g. 0.7 = 70% of full bonus.")]
-    [Range(0f, 1f)] public float nonExpertiseMultiplier = 0.7f;
+             "match this conservator's expertise.")]
+    [Range(0f, 1f)] public float nonExpertiseMultiplier = 0.7f;      //0.7 = 70% of full bonus.
 
-    [Header("Contractor Fields")]
-    public ContractorUpgradeType upgradeType = ContractorUpgradeType.None;
+
+    // ── CONTRACTOR fields -------------------------------------------------------------------
+    // Cards that upgrade various aspects of the shop
+    [Header("Contractor Card Fields")]
+    public ContractorUpgradeType upgradeType = ContractorUpgradeType.None;   // Uses enum defined in ContractorUpgradeType.cs
     public int upgradeAmount = 0;
-    public CardCategory categoryToUnlock;
-    public string subCategoryToUnlock;
     public string staffIdentifiesItemType;
 
-    [Tooltip("Gold cost to hire this contractor. If 0, cost is auto-calculated " +
-             "from upgradeAmount by EconomyManager.")]
+    // Unlocker type contractor
+    public CardCategory categoryToUnlock;     // If category needs to be unlocked via contractor card
+    public string subCategoryToUnlock;        // Same for sub-category
+
+    [Tooltip("Use to override and set fixed cost. If 0, cost is auto-calculated " +
+             "from and based on upgradeAmount by EconomyManager.")]
     public int contractorCost = 0;
 
+
+    // ── FREELANCER fields -------------------------------------------------------------------
+    // Cards that can be hired to perform an action over n turns
     [Header("Freelancer Fields")]
     public int roundsToReturn = 3;
-    public int freelancerMinItemValue = 0;
+    public int freelancerMinItemValue = 0;          // Fields used to randomise item returned by FreelancerManager
     public int freelancerMaxItemValue = 0;
 
-    [Tooltip("Gold cost to send this freelancer out. If 0, cost is auto-calculated " +
+    [Tooltip("Use to override and set fixed cost. If 0, cost is auto-calculated " +
              "as a percentage of their average item value by EconomyManager.")]
     public int freelancerCost = 0;
 
-    // ── Add new card-type fields below this line as the game grows ──
+
+    // ── Add new card-type fields below this line as the game grows --------------------------
+
+
+
+
 }

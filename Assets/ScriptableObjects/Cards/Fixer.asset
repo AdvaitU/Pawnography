@@ -17,20 +17,30 @@ MonoBehaviour:
   cardArt: {fileID: 0}
   category: {fileID: 11400000, guid: 6afdfb0db0498464c86d9c1b628000a8, type: 2}
   subCategory: 
-  canSpawn: 1
-  spawnWeight: 100
-  timesSpawnedThisRun: 0
+  canSpawn: 0
+  spawnWeight: 10
+  timesSpawnedThisRun: 2
   itemBuyCost: 0
   itemTrueValue: 0
   valueIsHidden: 1
+  itemCondition: 50
   buyerDesiredItemType: 
   buyerOfferedPrice: 0
+  buyerInterestPercentage: 30
+  buyerDisinterestPercentage: 60
   appraisalAccuracy: 1
+  conservatorExpertise: 
+  appraisalLevel: 10
+  nonExpertiseMultiplier: 0.7
   upgradeType: 4
   upgradeAmount: 0
+  staffIdentifiesItemType: 
   categoryToUnlock: {fileID: 11400000, guid: eba10a138cf705f48b01322f46910f0f, type: 2}
   subCategoryToUnlock: 
-  staffIdentifiesItemType: 
+  contractorCost: 0
   roundsToReturn: 3
   freelancerMinItemValue: 0
   freelancerMaxItemValue: 0
+  freelancerCost: 0
+  cardCategoryToUnlock: {fileID: 11400000, guid: 6afdfb0db0498464c86d9c1b628000a8, type: 2}
+  subCategorytoUnlock: 

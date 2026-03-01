@@ -1,38 +1,58 @@
-﻿#if UNITY_EDITOR
+﻿/*
+ * ============================================================
+ * SCRIPT:      CardDatabaseEditor.cs
+ * GAMEOBJECT:  Editor only — not present in any scene or build.
+ *              Extends the Inspector for the CardDatabase
+ *              component on GameManager.
+ * ------------------------------------------------------------
+ * FUNCTION:
+ *   Custom Unity Editor Inspector for CardDatabase. Adds two
+ *   auto-populate buttons that scan the ScriptableObjects/Cards/
+ *   and ScriptableObjects/Categories/ folders respectively and
+ *   add all found assets to the allCards and allCategories lists,
+ *   skipping any already present.
+ * ------------------------------------------------------------
+ * REFERENCED BY:
+ *   Unity Editor only
+ * ------------------------------------------------------------
+ * METHODS CALLED BY OTHER SCRIPTS:   None 
+ * ------------------------------------------------------------
+ * OPTIMISATION NOTES:
+ *   Wrapped in #if UNITY_EDITOR — zero impact on runtime or 
+ *   build size.
+ * ============================================================
+ */
+
+#if UNITY_EDITOR                // Script is stripped from builds entirely - only runs in Editor
 using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
 
-/// <summary>
-/// Custom Inspector for CardDatabase.
-/// Adds an "Auto-Populate Cards" button that scans Assets/ScriptableObjects/Cards/
-/// and adds all CardData assets found to the allCards list automatically.
-/// This is an Editor-only script and has no effect on builds.
-/// </summary>
+
 [CustomEditor(typeof(CardDatabase))]
-public class CardDatabaseEditor : Editor
+public class CardDatabaseEditor : Editor    // Inherits from Editor
 {
     public override void OnInspectorGUI()
     {
-        // Draw the default inspector fields as normal
-        DrawDefaultInspector();
+        DrawDefaultInspector();         // Draw the default inspector fields as normal
 
         CardDatabase database = (CardDatabase)target;
 
         EditorGUILayout.Space(10);
-        EditorGUILayout.LabelField("── Editor Tools ──", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("Editor Tools", EditorStyles.boldLabel);
 
-        // ── Auto-populate Cards button ──
+        // Buttons ---------------------------------------------------------------------
+        // Categories button
+        if (GUILayout.Button("Auto-Populate Categories from ScriptableObjects/Categories/", GUILayout.Height(40)))
+        {
+            AutoPopulateCategories(database);
+        }
+        // Cards button
         if (GUILayout.Button("Auto-Populate Cards from ScriptableObjects/Cards/", GUILayout.Height(40)))
         {
             AutoPopulateCards(database);
         }
 
-        // ── Auto-populate Categories button ──
-        if (GUILayout.Button("Auto-Populate Categories from ScriptableObjects/Categories/", GUILayout.Height(40)))
-        {
-            AutoPopulateCategories(database);
-        }
 
         // ── Clear list buttons ──
         EditorGUILayout.BeginHorizontal();
@@ -61,10 +81,9 @@ public class CardDatabaseEditor : Editor
         EditorGUILayout.EndHorizontal();
     }
 
-    /// <summary>
-    /// Scans Assets/ScriptableObjects/Cards/ for all CardData assets
-    /// and adds any that aren't already in the list.
-    /// </summary>
+    // METHODS ================================================================================================
+    // AutoPopulateCards() ----------------------------------------------
+    // Takes CardDatabase object as argument. Called in OnInspectorGUI() when button is clicked.
     private void AutoPopulateCards(CardDatabase database)
     {
         Undo.RecordObject(database, "Auto-Populate Cards");
@@ -97,10 +116,8 @@ public class CardDatabaseEditor : Editor
         Debug.Log($"[CardDatabaseEditor] Auto-populate complete. Added {added} cards, skipped {skipped} already in list.");
     }
 
-    /// <summary>
-    /// Scans Assets/ScriptableObjects/Categories/ for all CardCategory assets
-    /// and adds any that aren't already in the list.
-    /// </summary>
+    // AutoPopulateCategories() -----------------------------------------------------------------
+    // Takes CardDatabase object as argument. Called in OnInspectorGUI() when button is clicked.
     private void AutoPopulateCategories(CardDatabase database)
     {
         Undo.RecordObject(database, "Auto-Populate Categories");

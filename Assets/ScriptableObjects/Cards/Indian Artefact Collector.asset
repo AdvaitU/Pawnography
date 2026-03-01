@@ -12,29 +12,31 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ab2ab7d367e4af345bb77b98e447490a, type: 3}
   m_Name: Indian Artefact Collector
   m_EditorClassIdentifier: 
-  cardName: 
-  cardDescription: 
+  cardName: Indian Artefact Collector
+  cardDescription: Looking for Indian artefacts
   cardArt: {fileID: 0}
   category: {fileID: 11400000, guid: 43681f7f90102ef448e8db5c2f096d7a, type: 2}
   subCategory: 
   canSpawn: 1
   spawnWeight: 10
-  timesSpawnedThisRun: 0
+  timesSpawnedThisRun: 1
   itemBuyCost: 0
   itemTrueValue: 0
   valueIsHidden: 1
   itemCondition: 50
   buyerDesiredItemType: 
   buyerOfferedPrice: 0
+  buyerInterestPercentage: 30
+  buyerDisinterestPercentage: 60
   appraisalAccuracy: 1
   conservatorExpertise: 
   appraisalLevel: 10
   nonExpertiseMultiplier: 0.7
   upgradeType: 0
   upgradeAmount: 0
+  staffIdentifiesItemType: 
   categoryToUnlock: {fileID: 0}
   subCategoryToUnlock: 
-  staffIdentifiesItemType: 
   contractorCost: 0
   roundsToReturn: 3
   freelancerMinItemValue: 0

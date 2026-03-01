@@ -147,9 +147,9 @@ public class WarehousePanelUI : MonoBehaviour
         // - SlotConditionText (TextMeshPro)
 
         Image artImage = slotObj.transform.Find("SlotArtImage")?.GetComponent<Image>();
-        TextMeshProUGUI nameText = slotObj.transform.Find("SlotNameText")
+        TextMeshProUGUI nameText = slotObj.transform.Find("WarehouseSlotLayoutGroup").Find("SlotNameText")
                                           ?.GetComponent<TextMeshProUGUI>();
-        TextMeshProUGUI conditionText = slotObj.transform.Find("SlotConditionText")
+        TextMeshProUGUI conditionText = slotObj.transform.Find("WarehouseSlotLayoutGroup").Find("SlotConditionText")
                                                ?.GetComponent<TextMeshProUGUI>();
 
         if (item == null)

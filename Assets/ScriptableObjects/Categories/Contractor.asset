@@ -15,6 +15,6 @@ MonoBehaviour:
   categoryName: Contractor
   categoryDescription: People who can carry out work for the Pawn Shop such as increasing
     the size, remodelling the facade, upgrading the warehouse, etc.
-  canSpawn: 1
+  canSpawn: 0
   spawnWeight: 20
-  totalSpawnedThisRun: 0
+  totalSpawnedThisRun: 4

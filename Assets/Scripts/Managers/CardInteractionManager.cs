@@ -6,9 +6,7 @@
  * FUNCTION:
  *   Executes card effects at round end using StagedCardData
  *   which carries pre-selected metadata (chosen items, purchase
- *   confirmation). Buyer pays the higher of offered price vs
- *   item true value. No grace round — boss round failure is
- *   immediate game over.
+ *   confirmation). 
  * ------------------------------------------------------------
  * REFERENCED BY:
  *   RoundManager  -- calls ExecuteCardEffect() for each staged
@@ -34,21 +32,23 @@ public class CardInteractionManager : MonoBehaviour
         Instance = this;
     }
 
-    /// <summary>
-    /// Entry point called by RoundManager for each staged card.
-    /// Now receives StagedCardData to access pre-selected metadata.
-    /// </summary>
+    // METHODS ==============================================================================================
+
+    // ExecuteCardEffect(stagedCard) --------------------------------------------------------
+    // Wrapper method that contains a simple switch case to choose which method to execute
+    // Executes the effect for each staged card when Next Round is clicked
+    // Called by RoundManager for each staged card.
     public void ExecuteCardEffect(StagedCardData staged)
     {
-        CardData card = staged.card;
+        CardData card = staged.card;   // Creates local version of cached card from StagedCardData object that contains the CardData object
 
-        if (card.category == null)
+        if (card.category == null)  // Failsafe
         {
             Debug.LogWarning($"[CardInteractionManager] '{card.cardName}' has no category.");
             return;
         }
 
-        switch (card.category.categoryName)
+        switch (card.category.categoryName)                       // Strings need to match exact category name because CardCategory does not contain an enum
         {
             case "Seller": ExecuteSeller(staged); break;
             case "Buyer": ExecuteBuyer(staged); break;
@@ -63,40 +63,33 @@ public class CardInteractionManager : MonoBehaviour
         }
     }
 
-    // ─────────────────────────────────────────────
-    // SELLER
-    // Purchase was pre-confirmed via popup on card click.
-    // ─────────────────────────────────────────────
+    // SELLER CARDS -----------------------------------------------------------------------------
 
     private void ExecuteSeller(StagedCardData staged)
     {
-        CardData card = staged.card;
+        CardData card = staged.card;   // Local card data copied from 
 
-        if (!staged.purchaseConfirmed)
+        if (!staged.purchaseConfirmed)   // Failsafe
         {
             Debug.LogWarning($"[CardInteractionManager] Seller '{card.cardName}' " +
                              $"executed without purchase confirmation — skipping.");
             return;
         }
 
-        if (!InventoryManager.Instance.HasSpace())
+        if (!InventoryManager.Instance.HasSpace())         // If there is no space in the inventory
         {
-            PopupManager.Instance.OpenWarehouseFullWarning(() =>
-                WarehousePanelUI.Instance.OpenWarehouse());
+            PopupManager.Instance.OpenWarehouseFullWarning(() =>         
+                WarehousePanelUI.Instance.OpenWarehouse());               // Load Popup showing that
             return;
         }
 
-        EconomyManager.Instance.TrySpendGold(card.itemBuyCost, $"Buy {card.cardName}");
-        InventoryManager.Instance.TryAddItem(card);
-        CardUIManager.Instance.UpdateHUD();
+        EconomyManager.Instance.TrySpendGold(card.itemBuyCost, $"Buy {card.cardName}");        // Calls the Economy Manager to do gold spending
+        InventoryManager.Instance.TryAddItem(card);                                            // Adds the item to the Inventory Manager
+        CardUIManager.Instance.UpdateHUD();                                                    // Updates CardUI Manager to update the HUD - remove gold
         Debug.Log($"[CardInteractionManager] Bought '{card.cardName}' for {card.itemBuyCost}g.");
     }
 
-    // ─────────────────────────────────────────────
-    // BUYER
-    // Item was pre-chosen via popup on card click.
-    // Pays the higher of offered price vs item true value.
-    // ─────────────────────────────────────────────
+    // BUYER CARDS --------------------------------------------------------------------------------
 
     private void ExecuteBuyer(StagedCardData staged)
     {
@@ -111,22 +104,20 @@ public class CardInteractionManager : MonoBehaviour
 
         InventoryItem item = staged.chosenItem;
 
-        // Pay the higher of the buyer's offered price or the item's true value
+        // Pay the lower of the buyer's offered price or the item's true value
         int trueValue = item.sourceCard != null ? item.sourceCard.itemTrueValue : 0;
-        int payout = Mathf.Max(card.buyerOfferedPrice, trueValue);
+        int payout = Mathf.Min(card.buyerOfferedPrice, trueValue);
 
-        InventoryManager.Instance.TryRemoveItem(item);
-        EconomyManager.Instance.AddGold(payout, $"Sell {item.cardName} to {card.cardName}");
-        CardUIManager.Instance.UpdateHUD();
+        InventoryManager.Instance.TryRemoveItem(item);                                           // Remove the item from the inventory
+        EconomyManager.Instance.AddGold(payout, $"Sell {item.cardName} to {card.cardName}");     // Add gold to pocket
+        CardUIManager.Instance.UpdateHUD();                                                      // Update gold value in HUD
 
         Debug.Log($"[CardInteractionManager] Sold '{item.cardName}' to '{card.cardName}' " +
                   $"for {payout}g (offered: {card.buyerOfferedPrice}g, " +
                   $"true value: {trueValue}g).");
     }
 
-    // ─────────────────────────────────────────────
-    // CONSERVATOR
-    // ─────────────────────────────────────────────
+    // CONSERVATOR/EXPERT CARDS ----------------------------------------------------------------------
 
     private void ExecuteConservator(CardData card)
     {
@@ -167,6 +158,9 @@ public class CardInteractionManager : MonoBehaviour
                   $"New condition: {item.sourceCard.itemCondition}.");
     }
 
+
+    // ----------------------------------------------------------------------------------------------
+
     /// <summary>
     /// Helper Method -- Finds the RectTransform of the active CardUI displaying the given card.
     /// Used to position floating text below the correct card.
@@ -182,9 +176,8 @@ public class CardInteractionManager : MonoBehaviour
         return null;
     }
 
-    // ─────────────────────────────────────────────
-    // CONTRACTOR
-    // ─────────────────────────────────────────────
+
+    // CONTRACTOR CARDS -----------------------------------------------------------------------------
 
     private void ExecuteContractor(CardData card)
     {
@@ -198,13 +191,12 @@ public class CardInteractionManager : MonoBehaviour
         }
 
         EconomyManager.Instance.TrySpendGold(cost, $"Hire {card.cardName}");
-        ShopManager.Instance.ApplyUpgrade(card);
+        ShopManager.Instance.ApplyUpgrade(card);                                 // Relevant Upgrade applied
         CardUIManager.Instance.UpdateHUD();
     }
 
-    // ─────────────────────────────────────────────
-    // FREELANCER
-    // ─────────────────────────────────────────────
+
+    // FREELANCER CARDS -----------------------------------------------------------------------------
 
     private void ExecuteFreelancer(CardData card)
     {
@@ -220,5 +212,6 @@ public class CardInteractionManager : MonoBehaviour
         EconomyManager.Instance.TrySpendGold(cost, $"Send {card.cardName}");
         FreelancerManager.Instance.SendOutFreelancer(card);
         CardUIManager.Instance.UpdateHUD();
+        
     }
 }
