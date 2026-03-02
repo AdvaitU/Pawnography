@@ -50,17 +50,15 @@ public class EconomyManager : MonoBehaviour
 {
     public static EconomyManager Instance { get; private set; }
 
-    // ─────────────────────────────────────────────
-    // STARTING VALUES
-    // ─────────────────────────────────────────────
+    // MEMBERS =====================================================================================
+
+    // STARTING VALUES ------------------------------------------
 
     [Header("Starting Values")]
     [Tooltip("How much gold the player starts with.")]
     public int startingGold = 100;
 
-    // ─────────────────────────────────────────────
-    // RUNTIME STATE
-    // ─────────────────────────────────────────────
+    // RUNTIME STATS ------------------------------------------
 
     [Header("Runtime State — view in Play Mode")]
     public int currentGold = 0;
@@ -73,9 +71,7 @@ public class EconomyManager : MonoBehaviour
              "Reset after each boss round check.")]
     public int incomeThisCycle = 0;
 
-    // ─────────────────────────────────────────────
-    // BOSS ROUND THRESHOLD
-    // ─────────────────────────────────────────────
+    // BOSS ROUND THRESHOLD -------------------------------------------
 
     [Header("Boss Round Threshold")]
     [Tooltip("Income the player must earn per cycle to pass the first boss round.")]
@@ -95,9 +91,7 @@ public class EconomyManager : MonoBehaviour
     [Tooltip("How many boss rounds have been completed this run.")]
     public int bossRoundsCompleted = 0;
 
-    // ─────────────────────────────────────────────
-    // AUTO-COST SETTINGS
-    // ─────────────────────────────────────────────
+    // AUTO-COST SETTINGS -------------------------------------------
 
     [Header("Auto-Cost Settings")]
     [Tooltip("Contractor cost is calculated as upgradeAmount multiplied by this value " +
@@ -109,54 +103,54 @@ public class EconomyManager : MonoBehaviour
     [Range(0f, 1f)] public float freelancerCostPercentage = 0.3f;
 
 
-    // ─────────────────────────────────────────────
-    // EVENTS
-    // ─────────────────────────────────────────────
+    // EVENTS ======================================================================================
 
     [Header("Events")]
     public UnityEvent onGoldChanged;
     public UnityEvent onBossRoundPassed;
     public UnityEvent onBossRoundFailed;
 
+    // METHODS =====================================================================================
+
     private void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
+        ResetEconomy();
     }
 
     private void Start()
     {
-        currentGold = startingGold;
+        currentGold = startingGold;  
         currentThreshold = baseThreshold;
 
-        // Subscribe to boss round event from RoundManager
-        RoundManager.Instance.onBossRoundStart.AddListener(OnBossRoundStarted);
+        RoundManager.Instance.onBossRoundStart.AddListener(OnBossRoundStarted); // Subscribe to boss round event from RoundManager
 
         onGoldChanged?.Invoke();
         Debug.Log($"[EconomyManager] Starting gold: {currentGold}g. " +
                   $"First boss round threshold: {currentThreshold}g.");
     }
 
-    // ─────────────────────────────────────────────
-    // TRANSACTIONS
-    // ─────────────────────────────────────────────
-
+    // TrySpendGold() and AddGold() are the main methods for modifying the player's gold balance.
+    // TrySpendGold() -----------------------------------------------------
+    // Simply compares current gold to amount passed as parameter. If higher, it returns true. If lower, it returns false and logs a message to the console. 
+    
     /// <summary>
     /// Attempts to spend gold. Returns true if successful, false if insufficient funds.
     /// Pass a description for debug logging (e.g. "Buy Antique Clock").
     /// </summary>
     public bool TrySpendGold(int amount, string description = "")
     {
-        if (amount <= 0) return true; // Free — always succeeds
+        if (amount <= 0) return true; // If free
 
-        if (currentGold < amount)
+        if (currentGold < amount)     // If current balance is lower than amount, return false.
         {
             Debug.Log($"[EconomyManager] Cannot afford '{description}' " +
                       $"— costs {amount}g, have {currentGold}g.");
             return false;
         }
 
-        currentGold -= amount;
+        currentGold -= amount;  // If current balance is above amount, deduct amount from current balance.
         Debug.Log($"[EconomyManager] Spent {amount}g on '{description}'. " +
                   $"Remaining: {currentGold}g.");
         onGoldChanged?.Invoke();
@@ -180,6 +174,8 @@ public class EconomyManager : MonoBehaviour
         onGoldChanged?.Invoke();
     }
 
+    // CanAfford() -----------------------------------------------------
+    // Simple affordance check compares current gold to amount passed as parameter.
     /// <summary>
     /// Returns true if the player currently has enough gold for the given amount.
     /// </summary>
@@ -188,9 +184,10 @@ public class EconomyManager : MonoBehaviour
         return currentGold >= amount;
     }
 
-    // ─────────────────────────────────────────────
-    // COST CALCULATORS
-    // ─────────────────────────────────────────────
+
+    // Cost Calculators -----------------------------------------------------
+    // Cost Calculators for Contractors and Freelancers that auto-calculate costs based on type when no cost is set
+    // Create the auto-calculation logic for contractor and freelancers below - currently incomplete.
 
     /// <summary>
     /// Returns the gold cost to hire a contractor.
@@ -199,7 +196,7 @@ public class EconomyManager : MonoBehaviour
     /// </summary>
     public int GetContractorCost(CardData card)
     {
-        if (card.contractorCost > 0)
+        if (card.fixedCost)
             return card.contractorCost;
 
         // Auto-calculate based on upgrade type and amount
@@ -221,7 +218,7 @@ public class EconomyManager : MonoBehaviour
                 return Mathf.RoundToInt(contractorCostPerUpgradeUnit * 3f);
 
             default:
-                return 0;
+                return card.contractorCost;
         }
     }
 
@@ -232,7 +229,7 @@ public class EconomyManager : MonoBehaviour
     /// </summary>
     public int GetFreelancerCost(CardData card)
     {
-        if (card.freelancerCost > 0)
+        if (card.fixedCost)
             return card.freelancerCost;
 
         int averageValue = (card.freelancerMinItemValue + card.freelancerMaxItemValue) / 2;
@@ -252,10 +249,11 @@ public class EconomyManager : MonoBehaviour
         CheckBossRoundThreshold();
     }
 
-    //// <summary>
+    // THIS NEEDS TO BE CHANGED WHEN BUILDING THE BOSS ROUND SYSTEM — currently just checks income against threshold and triggers pass/fail events. 
+    /// <summary>
     /// Checks incomeThisCycle against currentThreshold.
     /// Pass: escalates threshold, resets cycle income.
-    /// Fail: immediate game over — no grace round.
+    /// Fail: immediate game over.
     /// </summary>
     public void CheckBossRoundThreshold()
     {

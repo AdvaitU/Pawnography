@@ -900,6 +900,8 @@ MonoBehaviour:
   maxTiltAngle: 15
   tiltSpeed: 10
   selectedRaiseAmount: 20
+  spawnBurstScale: 1.25
+  spawnBurstDuration: 0.5
 --- !u!114 &5147135332200421328
 MonoBehaviour:
   m_ObjectHideFlags: 0

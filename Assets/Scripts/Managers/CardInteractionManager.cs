@@ -106,7 +106,9 @@ public class CardInteractionManager : MonoBehaviour
 
         // Pay the lower of the buyer's offered price or the item's true value
         int trueValue = item.sourceCard != null ? item.sourceCard.itemTrueValue : 0;
-        int payout = Mathf.Min(card.buyerOfferedPrice, trueValue);
+        int payout = Mathf.Max(card.buyerOfferedPrice, trueValue);
+
+        
 
         InventoryManager.Instance.TryRemoveItem(item);                                           // Remove the item from the inventory
         EconomyManager.Instance.AddGold(payout, $"Sell {item.cardName} to {card.cardName}");     // Add gold to pocket
@@ -136,26 +138,31 @@ public class CardInteractionManager : MonoBehaviour
 
     private void ApplyConservatorToItem(CardData conservator, InventoryItem item)
     {
-        float deviation = 1f - conservator.appraisalAccuracy;
-        float multiplier = UnityEngine.Random.Range(1f - deviation, 1f + deviation);
-        int appraisedValue = Mathf.RoundToInt(item.sourceCard.itemTrueValue * multiplier);
-
         item.isAppraised = true;
-        item.appraisedValue = appraisedValue;
+        item.sourceCard.valueIsHidden = false;    // Sets the value to be visible if it was hidden before
 
-        bool isExpertise = !string.IsNullOrEmpty(conservator.conservatorExpertise) &&
-                           conservator.conservatorExpertise == item.sourceCard.subCategory;
+        bool isExpertise = conservator.conservatorExpertise != CardSubCategory.None &&
+                           item.sourceCard.subCategory != CardSubCategory.None &&
+                           conservator.conservatorExpertise == item.sourceCard.subCategory;  // Is the conservator an expert in the item's subcategory?
 
-        int conditionBonus = isExpertise
-            ? conservator.appraisalLevel
-            : Mathf.RoundToInt(conservator.appraisalLevel * conservator.nonExpertiseMultiplier);
-
-        item.sourceCard.itemCondition = Mathf.Clamp(
-            item.sourceCard.itemCondition + conditionBonus, 0, 100);
-
-        Debug.Log($"[CardInteractionManager] '{item.cardName}' appraised at {appraisedValue}g. " +
-                  $"Condition +{conditionBonus}. " +
-                  $"New condition: {item.sourceCard.itemCondition}.");
+        if (isExpertise)  // If conservator is an expert in that sub category.
+        {
+            if (conservator.isConservator == true)    // If it is both upgrade and appraisal, apply the upgrade first.
+            {
+                int addedValue = Mathf.RoundToInt(item.sourceCard.itemTrueValue * conservator.conservatorUpgradePercentage / 100f);  // Calculate the added value from the upgrade percentage
+                item.appraisedValue = item.sourceCard.itemTrueValue += addedValue;  // Set the appraised value to the new true value after upgrade
+            }
+            else
+            {
+                item.appraisedValue = item.sourceCard.itemTrueValue;  // If it's not an upgrade, just set the appraised value to the true value
+            }
+             
+        }
+        else
+        {
+            item.appraisedValue = Mathf.RoundToInt(item.sourceCard.itemTrueValue * conservator.nonExpertiseMultiplier);  // If not an expertise, apply the non-expertise multiplier to the true value for the appraised value
+        }
+        
     }
 
 

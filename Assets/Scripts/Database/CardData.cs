@@ -44,9 +44,8 @@ public class CardData : ScriptableObject
     [Tooltip("The top-level category this card belongs to.")]
     public CardCategory category;
 
-    [Tooltip("Sub-category label, e.g. 'Antique Seller', 'Electronics Buyer'. " +
-             "Used for grouping within a category.")]
-    public string subCategory;
+    [Tooltip("Sub-category label for Item based on CardSubCategory")]
+    public CardSubCategory subCategory;
 
     [Header("Spawning")]
     [Tooltip("Can be set false to lock card spawning, and true to unlock it")]
@@ -80,7 +79,7 @@ public class CardData : ScriptableObject
     // Cards that offer money in exchange for items held in the warehouse instantly
     [Header("Buyer Card Fields")]
     [Tooltip("What sub-category of item this buyer is looking for.")]
-    public string buyerDesiredItemType;
+    public CardSubCategory buyerDesiredItemType;
 
     [Tooltip("How much this buyer will pay for the right item.")]
     public int buyerOfferedPrice = 0;   // Deprecated - but kept in to not break functionality - You know how it is :(
@@ -95,17 +94,18 @@ public class CardData : ScriptableObject
     // ── CONSERVATOR / EXPERT fields ----------------------------------------------------------------
     // Cards that identify or upgrade the value of items held in the warehouse
     [Header("Conservator/Expert Card Fields")]
-    [Tooltip("Accuracy of this expert's appraisal as a 0-1 multiplier (1 = perfect).")]
-    [Range(0f, 1f)] public float appraisalAccuracy = 1f;    // Applied as a normalised percentage increase on item value
+
+    [Tooltip("Is this a Conservator or just an Appraiser? True = Both, False = Just Appraisal")]
+    public bool isConservator = false;
 
     [Tooltip("The item sub-category this conservator specialises in " +
              "(e.g. Antiques, Jewellery). Full condition bonus applied " +
              "to matching items, reduced bonus for non-matching.")]
-    public string conservatorExpertise;
+    public CardSubCategory conservatorExpertise;
 
     [Tooltip("How much this conservator raises an item's condition " +
              "when the item matches their expertise sub-category.")]
-    [Range(0, 100)] public int appraisalLevel = 10;
+    [Range(0, 200)] public int conservatorUpgradePercentage = 10;
 
     [Tooltip("Multiplier applied to appraisalLevel when the item does NOT " +
              "match this conservator's expertise.")]
@@ -117,15 +117,18 @@ public class CardData : ScriptableObject
     [Header("Contractor Card Fields")]
     public ContractorUpgradeType upgradeType = ContractorUpgradeType.None;   // Uses enum defined in ContractorUpgradeType.cs
     public int upgradeAmount = 0;
-    public string staffIdentifiesItemType;
+    public CardSubCategory staffIdentifiesItemType;
 
     // Unlocker type contractor
     public CardCategory categoryToUnlock;     // If category needs to be unlocked via contractor card
-    public string subCategoryToUnlock;        // Same for sub-category
+    public CardSubCategory subCategoryToUnlock;        // Same for sub-category
 
-    [Tooltip("Use to override and set fixed cost. If 0, cost is auto-calculated " +
-             "from and based on upgradeAmount by EconomyManager.")]
+    [Tooltip("Set true and then set the contractor cost below if fixed cost. Otherwise" +
+        "the cost is auto-calculated based on the contractor type and upgrade amount")]
+    public bool fixedCost = false;
+    [Tooltip("Set fixed cost here.")]
     public int contractorCost = 0;
+
 
 
     // ── FREELANCER fields -------------------------------------------------------------------

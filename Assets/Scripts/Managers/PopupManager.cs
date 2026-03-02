@@ -203,9 +203,10 @@ public class PopupManager : MonoBehaviour
         // Filter to only unappraised items
         List<InventoryItem> unappraisedItems = inventory.FindAll(i => !i.isAppraised);
 
+
         OpenPopup(
             $"Appraise with: {conservatorCard.cardName}",
-            $"Accuracy: {Mathf.RoundToInt(conservatorCard.appraisalAccuracy * 100)}%\n\n" +
+            $"Expertise: {conservatorCard.conservatorExpertise}%\n\n" +
             $"Choose an item to appraise:"
         );
 

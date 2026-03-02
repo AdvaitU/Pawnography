@@ -16,7 +16,7 @@ MonoBehaviour:
   cardDescription: Looking for Indian artefacts
   cardArt: {fileID: 0}
   category: {fileID: 11400000, guid: 43681f7f90102ef448e8db5c2f096d7a, type: 2}
-  subCategory: 
+  subCategory: 0
   canSpawn: 1
   spawnWeight: 10
   timesSpawnedThisRun: 1
@@ -24,19 +24,19 @@ MonoBehaviour:
   itemTrueValue: 0
   valueIsHidden: 1
   itemCondition: 50
-  buyerDesiredItemType: 
+  buyerDesiredItemType: 1
   buyerOfferedPrice: 0
   buyerInterestPercentage: 30
   buyerDisinterestPercentage: 60
   appraisalAccuracy: 1
-  conservatorExpertise: 
+  conservatorExpertise: 0
   appraisalLevel: 10
   nonExpertiseMultiplier: 0.7
   upgradeType: 0
   upgradeAmount: 0
-  staffIdentifiesItemType: 
+  staffIdentifiesItemType: 0
   categoryToUnlock: {fileID: 0}
-  subCategoryToUnlock: 
+  subCategoryToUnlock: 0
   contractorCost: 0
   roundsToReturn: 3
   freelancerMinItemValue: 0

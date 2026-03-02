@@ -43,7 +43,6 @@ public class CardUIManager : MonoBehaviour
     public TextMeshProUGUI selectionsText;
     public Button nextRoundButton;
     [Tooltip("HUD text showing current gold balance.")]
-    public TextMeshProUGUI goldText;
 
     [Header("Runtime State")]
     public List<CardUI> activeCardUIs = new List<CardUI>();
@@ -116,9 +115,6 @@ public class CardUIManager : MonoBehaviour
         if (selectionsText != null)
             selectionsText.text = $"Selected: {RoundManager.Instance.stagedCards.Count}" +
                                   $" / {RoundManager.Instance.maxSelectionsPerRound}";
-
-        if (goldText != null)
-            goldText.text = $"Gold: {EconomyManager.Instance.currentGold}g";
 
         // Keep ShopStatsUI in sync whenever the HUD updates
         if (ShopStatsUI.Instance != null)

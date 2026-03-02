@@ -133,11 +133,11 @@ public class HoverPopupUI : MonoBehaviour
 
             case "Conservator":
                 hoverCostText.gameObject.SetActive(true);
-                hoverValueText.gameObject.SetActive(true);
                 hoverExtraInfoText.gameObject.SetActive(true);
+                if(card.isConservator) hoverExtraInfoText.text = $"Upgrade Chance: {card.conservatorUpgradePercentage}%\n" +
+                                              $"Non-Expertise Multiplier: x{card.nonExpertiseMultiplier}";
+                else hoverExtraInfoText.text = "No chance of restoring and upgrading the value";
                 hoverCostText.text = $"Expertise: {card.conservatorExpertise}";
-                hoverValueText.text = $"Appraisal Level: +{card.appraisalLevel} Condition";
-                hoverExtraInfoText.text = $"Accuracy: {Mathf.RoundToInt(card.appraisalAccuracy * 100)}%";
                 hoverCategoryBanner.color = Color.magenta;
                 break;
 

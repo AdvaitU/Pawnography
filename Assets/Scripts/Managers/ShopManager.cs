@@ -1,4 +1,49 @@
-﻿using System.Collections.Generic;
+﻿/*
+ * ============================================================
+ * SCRIPT:      ShopManager.cs
+ * GAMEOBJECT:  GameManager
+ * ------------------------------------------------------------
+ * FUNCTION:
+ *   Central store for all shop stats: Warehouse Slots,
+ *   Reputation (placeholder), Floor Space, Unlocked Categories,
+ *   Unlocked Sub-Categories, and Hired Staff. All contractor
+ *   upgrades are routed through ApplyUpgrade() which returns a
+ *   before/after string for the confirmation popup. Syncs
+ *   starting values to InventoryManager and RoundManager on
+ *   Start(), then triggers the first round. ResetShop() can
+ *   be called to return all stats to starting values on a
+ *   new run.
+ * ------------------------------------------------------------
+ * REFERENCED BY:
+ *   CardInteractionManager -- calls ApplyUpgrade() in
+ *                          HandleContractor()
+ *   InventoryManager    -- calls CanAutoIdentify() in TryAddItem()
+ *                          to check for hired staff
+ * ------------------------------------------------------------
+ * METHODS CALLED BY OTHER SCRIPTS:
+ *   ApplyUpgrade()      --> Called by CardInteractionManager
+ *                          HandleContractor() — applies the
+ *                          upgrade and returns a before/after
+ *                          string for the popup
+ *   CanAutoIdentify()   --> Called by InventoryManager.TryAddItem()
+ *                          to check if hired staff can identify
+ *                          a newly acquired item's type
+ *   ResetShop()         --> To be called by a future GameManager
+ *                          or RunManager when starting a new run
+ * ------------------------------------------------------------
+ * OPTIMISATION NOTES:
+ *   Awake() -- singleton setup.
+ *   Start() -- syncs stats to InventoryManager and RoundManager,
+ *   registers unlocked categories, then triggers the first round.
+ *   This is the authoritative Start() that kicks off gameplay —
+ *   if initialisation order issues arise with future managers,
+ *   review script execution order in Project Settings.
+ *   No Update().
+ * ============================================================
+ */
+
+
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -43,12 +88,12 @@ public class ShopManager : MonoBehaviour
     public List<CardCategory> unlockedCategories = new List<CardCategory>();
 
     [Tooltip("Sub-category strings that have been explicitly unlocked by contractors.")]
-    public List<string> unlockedSubCategories = new List<string>();
+    public List<CardSubCategory> unlockedSubCategories = new List<CardSubCategory>();
 
     [Header("Hired Staff")]
     [Tooltip("List of item types that hired staff can permanently auto-identify. " +
              "e.g. 'Antiques', 'Electronics'. Populated as staff are hired.")]
-    public List<string> staffIdentifiedTypes = new List<string>();
+    public List<CardSubCategory> staffIdentifiedTypes = new List<CardSubCategory>();
 
     // ─────────────────────────────────────────────
     // EVENTS
@@ -57,7 +102,7 @@ public class ShopManager : MonoBehaviour
     [Header("Events")]
     public UnityEvent onShopStatsChanged;
     public UnityEvent<string> onCategoryUnlocked;   // Passes category name
-    public UnityEvent<string> onStaffHired;         // Passes item type identifier
+    public UnityEvent<CardSubCategory> onStaffHired;         // Passes item type identifier
 
     private void Awake()
     {
@@ -177,9 +222,9 @@ public class ShopManager : MonoBehaviour
         return $"New Category Unlocked|—|{category.categoryName}";
     }
 
-    private string UnlockSubCategory(string subCategory)
+    private string UnlockSubCategory(CardSubCategory subCategory)
     {
-        if (string.IsNullOrEmpty(subCategory))
+        if (subCategory == CardSubCategory.None)
         {
             Debug.LogWarning("[ShopManager] UnlockSubCategory called with empty string.");
             return "SubCategory Unlock|failed|failed";
@@ -205,9 +250,9 @@ public class ShopManager : MonoBehaviour
         return $"New Sub-Category Unlocked|—|{subCategory}";
     }
 
-    private string HireStaff(string itemType)
+    private string HireStaff(CardSubCategory itemType)
     {
-        if (string.IsNullOrEmpty(itemType))
+        if (itemType == CardSubCategory.None)
         {
             Debug.LogWarning("[ShopManager] HireStaff called with empty item type.");
             return "Staff|failed|failed";
@@ -235,7 +280,7 @@ public class ShopManager : MonoBehaviour
     /// Returns true if the shop has hired staff that can identify the given item type.
     /// Called by InventoryManager / appraisal logic when an item is acquired.
     /// </summary>
-    public bool CanAutoIdentify(string itemType)
+    public bool CanAutoIdentify(CardSubCategory itemType)
     {
         return staffIdentifiedTypes.Contains(itemType);
     }
