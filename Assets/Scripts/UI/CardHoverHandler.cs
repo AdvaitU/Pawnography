@@ -58,7 +58,7 @@ public class CardHoverHandler : MonoBehaviour, IPointerEnterHandler, IPointerExi
     /// </summary>
     public void OnPointerEnter(PointerEventData eventData)
     {
-        // Notify visual controller immediately — no delay on animations
+        // Notify visual controller immediately   no delay on animations
         if (visualController != null)
             visualController.SetHovered(true);
 
@@ -91,6 +91,6 @@ public class CardHoverHandler : MonoBehaviour, IPointerEnterHandler, IPointerExi
         yield return new WaitForSeconds(hoverDelay);
 
         if (cardData != null)
-            HoverPopupUI.Instance.ShowPopup(cardData);
+            HoverPopupUI.Instance.ShowPopup(cardData, GetComponent<RectTransform>());
     }
 }

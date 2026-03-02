@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab2ab7d367e4af345bb77b98e447490a, type: 3}
+  m_Name: Pop Culture Expert
+  m_EditorClassIdentifier: 
+  cardName: 
+  cardDescription: The self styled voice of this generation, Mrs. Strombabolous excels
+    at spotting notable collector's items from the late 50s all the way to the modern
+    day. And now her services can be yours!
+  cardArt: {fileID: 0}
+  category: {fileID: 11400000, guid: 1eada894644346540aa64f05522a8b03, type: 2}
+  subCategory: 0
+  canSpawn: 1
+  spawnWeight: 10
+  timesSpawnedThisRun: 0
+  itemBuyCost: 0
+  itemTrueValue: 0
+  valueIsHidden: 1
+  itemCondition: 50
+  buyerDesiredItemType: 0
+  buyerOfferedPrice: 0
+  buyerInterestPercentage: 30
+  buyerDisinterestPercentage: 60
+  isConservator: 0
+  conservatorExpertise: 2
+  conservatorUpgradePercentage: 10
+  nonExpertiseMultiplier: 0.7
+  upgradeType: 0
+  upgradeAmount: 0
+  staffIdentifiesItemType: 0
+  categoryToUnlock: {fileID: 0}
+  subCategoryToUnlock: 0
+  fixedCost: 0
+  contractorCost: 0
+  roundsToReturn: 3
+  freelancerMinItemValue: 0
+  freelancerMaxItemValue: 0
+  freelancerCost: 0

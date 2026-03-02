@@ -104,19 +104,20 @@ public class CardInteractionManager : MonoBehaviour
 
         InventoryItem item = staged.chosenItem;
 
-        // Pay the lower of the buyer's offered price or the item's true value
-        int trueValue = item.sourceCard != null ? item.sourceCard.itemTrueValue : 0;
-        int payout = Mathf.Max(card.buyerOfferedPrice, trueValue);
+        int itemSellCost = item.sourceCard.itemBuyCost + Mathf.RoundToInt(item.sourceCard.itemBuyCost * 0.2f);  // Sell cost is 20% (hard coded)
+        if (item.isAppraised) itemSellCost = item.appraisedValue;
+
+        //int trueValue = item.sourceCard != null ? item.sourceCard.itemTrueValue : 0;
+        //int payout = Mathf.Max(card.buyerOfferedPrice, trueValue);
 
         
 
         InventoryManager.Instance.TryRemoveItem(item);                                           // Remove the item from the inventory
-        EconomyManager.Instance.AddGold(payout, $"Sell {item.cardName} to {card.cardName}");     // Add gold to pocket
+        EconomyManager.Instance.AddGold(itemSellCost, $"Sell {item.cardName} to {card.cardName}");     // Add gold to pocket
         CardUIManager.Instance.UpdateHUD();                                                      // Update gold value in HUD
 
         Debug.Log($"[CardInteractionManager] Sold '{item.cardName}' to '{card.cardName}' " +
-                  $"for {payout}g (offered: {card.buyerOfferedPrice}g, " +
-                  $"true value: {trueValue}g).");
+                  $"for {itemSellCost}g.");
     }
 
     // CONSERVATOR/EXPERT CARDS ----------------------------------------------------------------------
@@ -130,7 +131,7 @@ public class CardInteractionManager : MonoBehaviour
             {
                 ApplyConservatorToItem(card, item);
                 CardUIManager.Instance.UpdateHUD();
-                InventoryUI.Instance.RefreshInventoryDisplay();
+                //InventoryUI.Instance.RefreshInventoryDisplay();
             },
             onCancel: () => Debug.Log("[CardInteractionManager] Appraisal cancelled.")
         );

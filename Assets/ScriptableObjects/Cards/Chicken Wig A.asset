@@ -10,32 +10,36 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ab2ab7d367e4af345bb77b98e447490a, type: 3}
-  m_Name: Chicken Wig
+  m_Name: Chicken Wig A
   m_EditorClassIdentifier: 
   cardName: Chicken Wig
-  cardDescription: Inspired by Elle's great typo on the day development for Pawnography
-    started, this is a wig for a chicken (as the title says)
-  cardArt: {fileID: 0}
+  cardDescription: A wig styled in the form of a chicken. Or is it a cock? Either
+    way, this fantastic piece of early 80s coutoure was worn by the talented Egg
+    Sheran as he received Album of the Year for his latest album "%"
+  cardArt: {fileID: 616430831405559747, guid: 7e7d792a477f4654487be2a640e60351, type: 3}
   category: {fileID: 11400000, guid: ec7337ca8c6220c408d85e9608d8c5af, type: 2}
-  subCategory: 
+  subCategory: 2
   canSpawn: 1
   spawnWeight: 10
-  timesSpawnedThisRun: 0
-  itemBuyCost: 50
-  itemTrueValue: 75
+  timesSpawnedThisRun: 1
+  itemBuyCost: 200
+  itemTrueValue: 130
   valueIsHidden: 1
   itemCondition: 50
-  buyerDesiredItemType: 
+  buyerDesiredItemType: 0
   buyerOfferedPrice: 0
-  appraisalAccuracy: 1
-  conservatorExpertise: 
-  appraisalLevel: 10
+  buyerInterestPercentage: 30
+  buyerDisinterestPercentage: 60
+  isConservator: 0
+  conservatorExpertise: 0
+  conservatorUpgradePercentage: 10
   nonExpertiseMultiplier: 0.7
   upgradeType: 0
   upgradeAmount: 0
+  staffIdentifiesItemType: 0
   categoryToUnlock: {fileID: 0}
-  subCategoryToUnlock: 
-  staffIdentifiesItemType: 
+  subCategoryToUnlock: 0
+  fixedCost: 0
   contractorCost: 0
   roundsToReturn: 3
   freelancerMinItemValue: 0

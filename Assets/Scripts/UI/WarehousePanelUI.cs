@@ -141,45 +141,42 @@ public class WarehousePanelUI : MonoBehaviour
     /// </summary>
     private void PopulateSlot(GameObject slotObj, InventoryItem item)
     {
-        // Expected children on the slot prefab:
-        // - SlotArtImage (Image)
-        // - SlotNameText (TextMeshPro)
-        // - SlotConditionText (TextMeshPro)
+        WarehouseSlot slot = slotObj.GetComponent<WarehouseSlot>();
+        WarehouseSlotHover hoverHandler = slotObj.GetComponent<WarehouseSlotHover>();
 
-        Image artImage = slotObj.transform.Find("SlotArtImage")?.GetComponent<Image>();
-        TextMeshProUGUI nameText = slotObj.transform.Find("WarehouseSlotLayoutGroup").Find("SlotNameText")
-                                          ?.GetComponent<TextMeshProUGUI>();
-        TextMeshProUGUI conditionText = slotObj.transform.Find("WarehouseSlotLayoutGroup").Find("SlotConditionText")
-                                               ?.GetComponent<TextMeshProUGUI>();
+        if (hoverHandler != null)
+            hoverHandler.SetItemData(item);
 
-        if (item == null)
+        if (slot == null)
         {
-            // Empty slot
-            if (artImage != null)
-            {
-                artImage.sprite = null;
-                artImage.color = new Color(0.85f, 0.85f, 0.85f, 1f); // light grey
-            }
-            if (nameText != null) nameText.text = "Empty";
-            if (conditionText != null) conditionText.text = "";
+            Debug.LogWarning("[WarehousePanelUI] Slot prefab missing WarehouseSlot component.");
             return;
         }
 
-        // Populated slot
-        if (artImage != null)
+        if (item == null)
         {
-            bool hasArt = item.sourceCard != null && item.sourceCard.cardArt != null;
-            artImage.sprite = hasArt ? item.sourceCard.cardArt : null;
-            artImage.color = hasArt ? Color.white : new Color(0.7f, 0.7f, 0.7f, 1f);
+            if (slot.artImage != null)
+            {
+                slot.artImage.sprite = null;
+                slot.artImage.color = new Color(0.85f, 0.85f, 0.85f, 1f);
+            }
+            if (slot.nameText != null) slot.nameText.text = "Empty";
+            return;
         }
 
-        if (nameText != null)
-            nameText.text = item.cardName;
+        if (slot.artImage != null)
+        {
+            bool hasArt = item.sourceCard != null && item.sourceCard.cardArt != null;
+            slot.artImage.sprite = hasArt ? item.sourceCard.cardArt : null;
+            slot.artImage.color = hasArt ? Color.white : new Color(0.7f, 0.7f, 0.7f, 1f);
+        }
 
-        if (conditionText != null)
-            conditionText.text = item.isAppraised
-                ? $"Condition: {item.sourceCard.itemCondition}\nValue: {item.appraisedValue}g"
-                : $"Condition: {item.sourceCard.itemCondition}\nValue: ???";
+        if (slot.nameText != null)
+        {
+            slot.nameText.text = "";   // Leave Empty
+        }
+            
+
     }
 
     /// <summary>

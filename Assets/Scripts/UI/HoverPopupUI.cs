@@ -49,7 +49,6 @@ public class HoverPopupUI : MonoBehaviour
     public TextMeshProUGUI hoverConditionText;
     public TextMeshProUGUI hoverExtraInfoText;
     public Image hoverCategoryBanner;
-    public Image hoverCardArt;
 
     [Tooltip("Reference to the Canvas for screen space calculations.")]
     public Canvas parentCanvas;
@@ -72,10 +71,10 @@ public class HoverPopupUI : MonoBehaviour
     /// Add animation logic here when ready — e.g. a fade-in or scale tween.
     /// The popup will display correctly before any animation is added.
     /// </summary>
-    public void ShowPopup(CardData card)
+    public void ShowPopup(CardData card, RectTransform sourceRect = null)
     {
         PopulatePopup(card);
-        PositionAtBottomLeft();
+        PositionPopupBelowRect(sourceRect);
         popupPanel.SetActive(true);
         isVisible = true;
     }
@@ -101,7 +100,6 @@ public class HoverPopupUI : MonoBehaviour
         hoverCardNameText.text = card.cardName;
         hoverCategoryText.text = card.category != null ? card.category.categoryName : "Unknown";
         hoverDescriptionText.text = card.cardDescription;
-        hoverCardArt.sprite = card.cardArt;
 
         // Reset optional fields
         hoverCostText.gameObject.SetActive(false);
@@ -116,26 +114,22 @@ public class HoverPopupUI : MonoBehaviour
             case "Seller":
                 hoverCostText.gameObject.SetActive(true);
                 hoverValueText.gameObject.SetActive(true);
-                hoverConditionText.gameObject.SetActive(true);
-                hoverCostText.text = $"Buy Cost: {card.itemBuyCost}g";
+                hoverCostText.text = $"Selling for {card.itemBuyCost}g";
                 hoverValueText.text = card.valueIsHidden ? "Value: ???" : $"Value: {card.itemTrueValue}g";
-                hoverConditionText.text = $"Condition: {card.itemCondition}";
                 hoverCategoryBanner.color = Color.blue;
                 break;
 
             case "Buyer":
                 hoverCostText.gameObject.SetActive(true);
-                hoverValueText.gameObject.SetActive(true);
-                hoverCostText.text = $"Wants: {card.buyerDesiredItemType}";
-                hoverValueText.text = $"Offers: {card.buyerOfferedPrice}g";
+                if (card.buyerDesiredItemType == CardSubCategory.None) hoverCostText.text = "Looking for anything that will catch their eye.";
+                else hoverCostText.text = $"Looking for {card.buyerDesiredItemType}";
                 hoverCategoryBanner.color = Color.green;
                 break;
 
             case "Conservator":
                 hoverCostText.gameObject.SetActive(true);
                 hoverExtraInfoText.gameObject.SetActive(true);
-                if(card.isConservator) hoverExtraInfoText.text = $"Upgrade Chance: {card.conservatorUpgradePercentage}%\n" +
-                                              $"Non-Expertise Multiplier: x{card.nonExpertiseMultiplier}";
+                if(card.isConservator) hoverExtraInfoText.text = $"Can appraise and raise the right item's value by {card.conservatorUpgradePercentage}%";
                 else hoverExtraInfoText.text = "No chance of restoring and upgrading the value";
                 hoverCostText.text = $"Expertise: {card.conservatorExpertise}";
                 hoverCategoryBanner.color = Color.magenta;
@@ -157,12 +151,9 @@ public class HoverPopupUI : MonoBehaviour
 
             case "Freelancer":
                 hoverCostText.gameObject.SetActive(true);
-                hoverValueText.gameObject.SetActive(true);
                 hoverExtraInfoText.gameObject.SetActive(true);
-                hoverCostText.text = $"Returns in: {card.roundsToReturn} rounds";
-                hoverValueText.text = $"Item value: {card.freelancerMinItemValue}" +
-                                      $"-{card.freelancerMaxItemValue}g";
-                hoverExtraInfoText.text = $"Cost: {EconomyManager.Instance.GetFreelancerCost(card)}g";
+                hoverCostText.text = $"Returns in: {card.roundsToReturn} rounds with an item of value between {card.freelancerMinItemValue}g and {card.freelancerMaxItemValue}g";
+                hoverExtraInfoText.text = $"This service will cost you {EconomyManager.Instance.GetFreelancerCost(card)}g";
                 hoverCategoryBanner.color = Color.black;
                 break;
 
@@ -176,16 +167,56 @@ public class HoverPopupUI : MonoBehaviour
     /// of the screen with a configurable padding offset.
     /// Called once when the popup is shown rather than every frame.
     /// </summary>
-    private void PositionAtBottomLeft()
+    private void PositionPopupBelowRect(RectTransform sourceRect = null)
     {
         RectTransform rt = popupPanel.GetComponent<RectTransform>();
+        RectTransform canvasRect = parentCanvas.GetComponent<RectTransform>();
 
-        // Anchor and pivot to bottom-left so position is relative to that corner
-        rt.anchorMin = new Vector2(0f, 0f);
-        rt.anchorMax = new Vector2(0f, 0f);
-        rt.pivot = new Vector2(0f, 0f);
+        if (sourceRect == null)
+        {
+            rt.anchorMin = new Vector2(0f, 0f);
+            rt.anchorMax = new Vector2(0f, 0f);
+            rt.pivot = new Vector2(0f, 0f);
+            rt.anchoredPosition = new Vector2(screenPadding.x, screenPadding.y);
+            return;
+        }
 
-        // Position with padding inset from the bottom-left corner
-        rt.anchoredPosition = new Vector2(screenPadding.x, screenPadding.y);
+        // Compute bottom-center world point of the source RectTransform
+        Vector3[] corners = new Vector3[4];
+        sourceRect.GetWorldCorners(corners);
+        Vector3 bottomLeft = corners[0];
+        Vector3 bottomRight = corners[3];
+        Vector3 bottomCenterWorld = (bottomLeft + bottomRight) * 0.5f;
+
+        // Convert to canvas-local coordinates
+        Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(
+            parentCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : parentCanvas.worldCamera,
+            bottomCenterWorld);
+
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPoint,
+            parentCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : parentCanvas.worldCamera,
+            out Vector2 localPoint);
+
+        // Place the popup so its top-center sits at the bottom-center of the source,
+        // offset downwards by screenPadding.y
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 1f);
+
+        Vector2 anchoredPos = localPoint + new Vector2(0f, -screenPadding.y);
+
+        // Clamp horizontally so popup stays on canvas
+        float halfWidth = rt.rect.width * 0.5f;
+        float leftLimit = canvasRect.rect.xMin + halfWidth;
+        float rightLimit = canvasRect.rect.xMax - halfWidth;
+        anchoredPos.x = Mathf.Clamp(anchoredPos.x, leftLimit, rightLimit);
+
+        // Clamp vertically so popup doesn't go off the top of the canvas
+        float topLimit = canvasRect.rect.yMax - 0f;
+        float bottomLimit = canvasRect.rect.yMin + rt.rect.height;
+        anchoredPos.y = Mathf.Clamp(anchoredPos.y, bottomLimit, topLimit);
+
+        rt.anchoredPosition = anchoredPos;
     }
+
 }
