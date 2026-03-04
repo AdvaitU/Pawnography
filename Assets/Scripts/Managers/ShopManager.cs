@@ -167,7 +167,10 @@ public class ShopManager : MonoBehaviour
     // ─────────────────────────────────────────────
     // INDIVIDUAL UPGRADE METHODS
     // ─────────────────────────────────────────────
-
+    /// <summary>
+    /// Increases warehouse slot count and syncs with InventoryManager.
+    /// Returns a "StatName|before|after" string for popup display.
+    /// </summary>
     private string UpgradeWarehouseSlots(int amount)
     {
         int before = warehouseSlots;
@@ -179,6 +182,10 @@ public class ShopManager : MonoBehaviour
         return $"Warehouse Slots|{before}|{warehouseSlots}";
     }
 
+    /// <summary>
+    /// Increases shop reputation, clamped to maxReputation.
+    /// Returns a "StatName|before|after" string for popup display.
+    /// </summary>
     private string UpgradeReputation(int amount)
     {
         int before = reputation;
@@ -189,6 +196,11 @@ public class ShopManager : MonoBehaviour
         // ── Future: hook reputation into seller quality spawn weighting here ──
     }
 
+    /// <summary>
+    /// Increases floor space (cards per round), clamped to maxFloorSpace.
+    /// Syncs with RoundManager.cardsPerRound immediately.
+    /// Returns a "StatName|before|after" string for popup display.
+    /// </summary>
     private string UpgradeFloorSpace(int amount)
     {
         int before = floorSpace;
@@ -200,6 +212,10 @@ public class ShopManager : MonoBehaviour
         return $"Floor Space (Cards per Round)|{before}|{floorSpace}";
     }
 
+    /// <summary>
+    /// Sets canSpawn = true on the given CardCategory and adds it to
+    /// unlockedCategories. Returns a "StatName|before|after" string.
+    /// </summary>
     private string UnlockCategory(CardCategory category)
     {
         if (category == null)
@@ -222,6 +238,11 @@ public class ShopManager : MonoBehaviour
         return $"New Category Unlocked|—|{category.categoryName}";
     }
 
+    /// <summary>
+    /// Adds the sub-category to unlockedSubCategories and enables
+    /// canSpawn on all CardData assets with a matching subCategory.
+    /// Returns a "StatName|before|after" string.
+    /// </summary>
     private string UnlockSubCategory(CardSubCategory subCategory)
     {
         if (subCategory == CardSubCategory.None)
@@ -250,6 +271,11 @@ public class ShopManager : MonoBehaviour
         return $"New Sub-Category Unlocked|—|{subCategory}";
     }
 
+    /// <summary>
+    /// Adds the item type to staffIdentifiedTypes. Items of this type
+    /// will be auto-identified when added to inventory via TryAddItem().
+    /// Returns a "StatName|before|after" string.
+    /// </summary>
     private string HireStaff(CardSubCategory itemType)
     {
         if (itemType == CardSubCategory.None)

@@ -71,9 +71,9 @@ public class HoverPopupUI : MonoBehaviour
     /// Add animation logic here when ready — e.g. a fade-in or scale tween.
     /// The popup will display correctly before any animation is added.
     /// </summary>
-    public void ShowPopup(CardData card, RectTransform sourceRect = null)
+    public void ShowPopup(CardData card, RectTransform sourceRect = null, bool revealValue = false, int overrideDisplayValue = -1)
     {
-        PopulatePopup(card);
+        PopulatePopup(card, revealValue, overrideDisplayValue);
         PositionPopupBelowRect(sourceRect);
         popupPanel.SetActive(true);
         isVisible = true;
@@ -95,8 +95,9 @@ public class HoverPopupUI : MonoBehaviour
     /// <summary>
     /// Fills all popup text fields based on the card's category and data.
     /// </summary>
-    private void PopulatePopup(CardData card)
+    private void PopulatePopup(CardData card, bool revealValue = false, int overrideDisplayValue = -1)
     {
+
         hoverCardNameText.text = card.cardName;
         hoverCategoryText.text = card.category != null ? card.category.categoryName : "Unknown";
         hoverDescriptionText.text = card.cardDescription;
@@ -115,7 +116,23 @@ public class HoverPopupUI : MonoBehaviour
                 hoverCostText.gameObject.SetActive(true);
                 hoverValueText.gameObject.SetActive(true);
                 hoverCostText.text = $"Selling for {card.itemBuyCost}g";
-                hoverValueText.text = card.valueIsHidden ? "Value: ???" : $"Value: {card.itemTrueValue}g";
+
+                // Use revealValue override OR the SO's own flag — whichever reveals it
+                bool showValue = revealValue || !card.valueIsHidden;
+
+                if (showValue)
+                {
+                    // Use the conservator-adjusted runtime value if one was passed,
+                    // otherwise fall back to the SO's base true value.
+                    int displayValue = overrideDisplayValue >= 0
+                                       ? overrideDisplayValue
+                                       : card.itemTrueValue;
+                    hoverValueText.text = $"Value: {displayValue}g";
+                }
+                else
+                {
+                    hoverValueText.text = "Value: ???";
+                }
                 hoverCategoryBanner.color = Color.blue;
                 break;
 

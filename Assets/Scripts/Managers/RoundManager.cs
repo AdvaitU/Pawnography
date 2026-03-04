@@ -85,6 +85,14 @@ public class RoundManager : MonoBehaviour
 
     // StartNewRound() method ----------------------------------------------------------------------
     // Called by ShopManager. Conditional for boss round executed here. Invokes the relevant event.
+
+    /// <summary>
+    /// Increments the round counter, clears staged cards, and checks
+    /// whether this is a boss round. Boss rounds fire onBossRoundStart
+    /// only. Normal rounds draw cards and fire onRoundStart.
+    /// Called by ShopManager.Start() for the first round and by
+    /// ProcessAndEndRound() for all subsequent rounds.
+    /// </summary>
     public void StartNewRound()
     {
         currentRound++;      // Raise round number
@@ -110,6 +118,13 @@ public class RoundManager : MonoBehaviour
     // Stages a card with empty metadata. Called by CardUI on click.
     // Returns the new StagedCardData so CardUI can populate metadata.
     // Returns null if the card is already staged or the max is reached.
+
+    /// <summary>
+    /// Stages a card with empty metadata. Returns the new StagedCardData
+    /// so the caller can populate type-specific fields (chosenItem,
+    /// purchaseConfirmed). Returns null if the card is already staged
+    /// or the max selection count has been reached.
+    /// </summary>
     public StagedCardData StageCard(CardData card)
     {
         if (GetStagedData(card) != null)
@@ -135,6 +150,13 @@ public class RoundManager : MonoBehaviour
     // UnstageCard() -  Removes a card from the staged list. ----------------------------------------------
     // Returns the removed StagedCardData so CardUI can clean up metadata (e.g. free a chosen item back to the inventory display).
     // Called by CardUI on deselect
+
+    /// <summary>
+    /// Removes a card from the staged list. Returns the removed
+    /// StagedCardData so the caller can clean up metadata
+    /// (e.g. free a chosen item back to the inventory display).
+    /// Returns null if the card was not staged.
+    /// </summary>
     public StagedCardData UnstageCard(CardData card)
     {
         StagedCardData staged = GetStagedData(card);
@@ -154,6 +176,11 @@ public class RoundManager : MonoBehaviour
     // GetStagedData() - Getter function that simply returns the staged card data. -----------------------
     // Returns the StagedCardData for a given card, or null if not staged.
     // Called by CardUI to read staged card data to display
+
+    /// <summary>
+    /// Returns the StagedCardData for a given CardData, or null if
+    /// that card is not currently staged.
+    /// </summary>
     public StagedCardData GetStagedData(CardData card)
     {
         return stagedCards.Find(s => s.card == card);
@@ -161,6 +188,13 @@ public class RoundManager : MonoBehaviour
 
     // ProcessAndEndRound() - Called by CardUIManager when 'Next Round' button is clicked. ----------------
     // Executes all staged card effects then advances the round.
+
+    /// <summary>
+    /// Executes all staged card effects via CardInteractionManager,
+    /// clears the staged list, fires onRoundEnd, then immediately
+    /// calls StartNewRound(). Called by CardUIManager when the
+    /// Next Round button is clicked.
+    /// </summary>
     public void ProcessAndEndRound()
     {
         Debug.Log($"[RoundManager] Processing {stagedCards.Count} staged selection(s).");
@@ -177,6 +211,13 @@ public class RoundManager : MonoBehaviour
 
     // TriggerGameOver() -----------------------------------------------------------------------------------
     // Currently does nothing except logging, more functionality to be added here.
+
+    /// <summary>
+    /// Triggers the game over state. Fires onGameOver.
+    /// Called by EconomyManager when the boss round income
+    /// threshold is not met. Expand this method when building
+    /// the Game Over screen and run progression system.
+    /// </summary>
     public void TriggerGameOver()
     {
         Debug.Log("[RoundManager] GAME OVER.");

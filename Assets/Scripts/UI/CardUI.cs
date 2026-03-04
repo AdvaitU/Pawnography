@@ -102,10 +102,6 @@ public class CardUI : MonoBehaviour
     }
 
     /// <summary>
-    /// Routes click by category. Seller and Buyer open popups immediately.
-    /// Other types toggle staged state directly.
-    /// </summary>
-    /// <summary>
     /// Routes click by category. Checks affordability for all card types
     /// before any staging or popup. Shows floating text and blocks
     /// selection if the player cannot afford the card.
@@ -190,10 +186,6 @@ public class CardUI : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Opens a seller confirmation popup. Card stages only if confirmed.
-    /// Affordability already checked before this is called.
-    /// </summary>
     /// <summary>
     /// Stages the seller card immediately on click — no confirmation popup.
     /// Affordability and inventory space already checked before this is called.

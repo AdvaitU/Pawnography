@@ -1,4 +1,40 @@
-﻿using System;
+﻿/*
+ * ============================================================
+ * SCRIPT:      PopupManager.cs
+ * GAMEOBJECT:  UIManager
+ * ------------------------------------------------------------
+ * FUNCTION:
+ *   A centre screen (with background overlay) reusable popup 
+ *   panel that adapts its content and buttons depending on 
+ *   the context it is opened in. 
+ *   All card interaction flows that require player input route 
+ *   through here. Buttons instantiated dynamically and 
+ *   destroyed on close.
+ * ------------------------------------------------------------
+ * REFERENCED BY:
+ *   CardUI              -- calls OpenWarehouseFullWarning()
+ *                          and OpenBuyerItemSelection()
+ *   CardInteractionManager -- calls OpenConservatorItemSelection(),
+ *                          OpenWarehouseFullWarning()
+ * ------------------------------------------------------------
+ * METHODS CALLED BY OTHER SCRIPTS:
+ *   OpenPopup()                    --> Internal; used by all
+ *                                      pre-built flows
+ *   ClosePopup()                   --> Called by button callbacks
+ *   OpenWarehouseFullWarning()     --> Called by CardUI and
+ *                                      CardInteractionManager
+ *   OpenBuyerItemSelection()       --> Called by CardUI
+ *   OpenConservatorItemSelection() --> Called by CardInteractionManager
+ *   OpenContractorConfirmation()   --> Exists but currently unused
+ *   OpenFreelancerConfirmation()   --> Exists but currently unused
+ * ------------------------------------------------------------
+ * OPTIMISATION NOTES:
+ *   Awake() -- singleton setup. No Update().
+ *   Buttons are Instantiated and Destroyed per popup open/close.
+ * ============================================================
+ */
+
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -121,26 +157,6 @@ public class PopupManager : MonoBehaviour
     // ─────────────────────────────────────────────
 
     /// <summary>
-    /// Opens a confirmation popup for purchasing an item from a Seller.
-    /// onConfirm is called if the player accepts, onCancel if they back out.
-    /// </summary>
-    /*public void OpenSellerConfirmation(CardData card, Action onConfirm, Action onCancel)
-    {
-        string valueStr = card.valueIsHidden ? "???" : $"{card.itemTrueValue}g";
-        OpenPopup(
-            $"Buy: {card.cardName}",
-            $"The seller is asking {card.itemBuyCost}g for this item.\n" +
-            $"Estimated value: {valueStr}\n\nDo you want to buy it?"
-        );
-
-        AddButton("Buy", () => { ClosePopup(); onConfirm(); },
-            new Color(0.3f, 0.75f, 0.3f)); // green
-
-        AddButton("Cancel", () => { ClosePopup(); onCancel(); },
-            new Color(0.8f, 0.3f, 0.3f)); // red
-    }*/
-
-    /// <summary>
     /// Opens a popup informing the player their warehouse is full,
     /// with a button to open the inventory screen so they can sell something.
     /// onOpenInventory is called when the player clicks the inventory button.
@@ -171,7 +187,6 @@ public class PopupManager : MonoBehaviour
         OpenPopup(
             $"Sell to: {buyerCard.cardName}",
             $"Looking for: {buyerCard.buyerDesiredItemType}\n" +
-            $"Offering: {buyerCard.buyerOfferedPrice}g\n\n" +
             $"Choose an item from your warehouse to sell:"
         );
 
@@ -220,48 +235,6 @@ public class PopupManager : MonoBehaviour
 
         foreach (InventoryItem item in unappraisedItems)
             AddItemRow(item, (chosen) => { ClosePopup(); onItemChosen(chosen); });
-
-        AddButton("Cancel", () => { ClosePopup(); onCancel(); },
-            new Color(0.6f, 0.6f, 0.6f));
-    }
-
-    /// <summary>
-    /// Opens a contractor confirmation popup showing the before and after stat values.
-    /// upgradeResult is the pipe-delimited string returned by ShopManager.ApplyUpgrade()
-    /// in the format "StatName|beforeValue|afterValue".
-    /// </summary>
-    public void OpenContractorConfirmation(CardData card, string upgradeResult, Action onConfirm)
-    {
-        // Parse the result string from ShopManager
-        string[] parts = upgradeResult.Split('|');
-        string statName = parts.Length > 0 ? parts[0] : "Stat";
-        string beforeVal = parts.Length > 1 ? parts[1] : "?";
-        string afterVal = parts.Length > 2 ? parts[2] : "?";
-
-        OpenPopup(
-            $"Contractor: {card.cardName}",
-            $"{card.cardDescription}\n\n" +
-            $"{statName}:  {beforeVal}  →  {afterVal}"
-        );
-
-        AddButton("OK", () => { ClosePopup(); onConfirm(); },
-            new Color(0.3f, 0.75f, 0.3f));
-    }
-
-    /// <summary>
-    /// Opens a confirmation popup for a Freelancer being sent out.
-    /// </summary>
-    public void OpenFreelancerConfirmation(CardData card, Action onConfirm, Action onCancel)
-    {
-        OpenPopup(
-            $"Send out: {card.cardName}",
-            $"This freelancer will return in {card.roundsToReturn} rounds with an item " +
-            $"worth between {card.freelancerMinItemValue}g and {card.freelancerMaxItemValue}g.\n\n" +
-            $"Send them out?"
-        );
-
-        AddButton("Send Out", () => { ClosePopup(); onConfirm(); },
-            new Color(0.3f, 0.75f, 0.3f));
 
         AddButton("Cancel", () => { ClosePopup(); onCancel(); },
             new Color(0.6f, 0.6f, 0.6f));

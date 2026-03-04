@@ -73,6 +73,14 @@ public class WarehouseSlotHover : MonoBehaviour, IPointerEnterHandler, IPointerE
     private IEnumerator ShowPopupAfterDelay()
     {
         yield return new WaitForSeconds(hoverDelay);
-        HoverPopupUI.Instance.ShowPopup(currentItem.sourceCard, GetComponent<RectTransform>());
+
+        bool revealValue = currentItem.valueIsRevealed || currentItem.isAppraised;
+        int overrideValue = currentItem.isAppraised ? currentItem.appraisedValue : -1;
+
+        HoverPopupUI.Instance.ShowPopup(
+            currentItem.sourceCard,
+            GetComponent<RectTransform>(),
+            revealValue,
+            overrideValue);
     }
 }

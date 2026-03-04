@@ -21,8 +21,9 @@
  *                          directly on Start() and ResetShop()
  *   FreelancerManager   -- calls TryAddItem() when a freelancer
  *                          returns with an item
- *   InventoryUI         -- reads items list and maxSlots in
- *                          RefreshInventoryDisplay()
+ *   WarehousePanelUI    -- reads items list and maxSlots in
+ *                          RefreshWarehouse(); subscribed to
+ *                          onInventoryChanged event
  *   PopupManager        -- reads items list to populate buyer
  *                          and conservator item selection lists
  * ------------------------------------------------------------
@@ -176,8 +177,8 @@ public class InventoryItem
     [Tooltip("The appraised value — may differ from sourceCard.itemTrueValue depending on appraiser accuracy.")]
     public int appraisedValue = 0;
 
-    [Tooltip("If true, this item is reserved for an active freelancer or buyer deal.")]
-    public bool isReserved = false;
+    [Tooltip("If true, this item's value is hidden from the player.")]
+    public bool valueIsRevealed = false;
 
     // Constructor — initialises from a CardData asset
     public InventoryItem(CardData card)

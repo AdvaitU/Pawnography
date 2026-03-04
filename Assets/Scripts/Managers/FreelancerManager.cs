@@ -1,3 +1,31 @@
+/*
+ * ============================================================
+ * SCRIPT:      FreelancerManager.cs
+ * GAMEOBJECT:  GameManager
+ * ------------------------------------------------------------
+ * FUNCTION:
+ *   Tracks all active freelancers that have been sent out.
+ *   Each round start, decrements all return countdowns via
+ *   TickFreelancers(). When a freelancer's countdown hits 0,
+ *   ResolveFreelancer() is called.
+ * ------------------------------------------------------------
+ * REFERENCED BY:
+ *   CardInteractionManager -- calls SendOutFreelancer() when
+ *                          a freelancer card is executed
+ *   ShopStatsUI            -- subscribes to onFreelancerReturned
+ *                          to refresh the freelancer list display
+ * ------------------------------------------------------------
+ * METHODS CALLED BY OTHER SCRIPTS:
+ *   SendOutFreelancer()    --> Called by CardInteractionManager
+ *                          when a freelancer card is confirmed
+ * ------------------------------------------------------------
+ * OPTIMISATION NOTES:
+ *   Start() -- subscribes TickFreelancers() to onRoundStart.
+ *   No Update(). activeFreelancers list is iterated once per
+ *   round start.
+ * ============================================================
+ */
+
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
@@ -96,8 +124,9 @@ public class FreelancerManager : MonoBehaviour
 }
 
 /// <summary>
-/// Runtime data for a freelancer that has been sent out.
-/// Tracks countdown and the result when they return.
+/// Runtime data container for a freelancer that has been sent out.
+/// Tracks the return countdown and the item value when they return.
+/// Not a MonoBehaviour — lives only in memory during a run.
 /// </summary>
 [System.Serializable]
 public class ActiveFreelancer
@@ -108,6 +137,11 @@ public class ActiveFreelancer
     public int maxItemValue;
     public int returnedItemValue; // Set when they return
 
+    /// <summary>
+    /// Initialises the freelancer's runtime state from its source CardData.
+    /// roundsRemaining is set to card.roundsToReturn and decremented
+    /// each round by FreelancerManager.TickFreelancers().
+    /// </summary>
     public ActiveFreelancer(CardData card)
     {
         cardName = card.cardName;

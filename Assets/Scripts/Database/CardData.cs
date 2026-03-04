@@ -81,14 +81,8 @@ public class CardData : ScriptableObject
     [Tooltip("What sub-category of item this buyer is looking for.")]
     public CardSubCategory buyerDesiredItemType;
 
-    [Tooltip("How much this buyer will pay for the right item.")]
-    public int buyerOfferedPrice = 0;   // Deprecated - but kept in to not break functionality - You know how it is :(
-
     [Tooltip("Percentage increase for the right category of item")]
-    [Range(0, 100)] public int buyerInterestPercentage = 30;           // Buyer will offer 30% more (i.e. 130% of) the price quoted
-
-    [Tooltip("Percentage decrease for wrong category of item")]
-    [Range(0, 100)] public int buyerDisinterestPercentage = 60;        // Buyer will offer 60% less (i.e. 40%) of the price quoted
+    [Range(0.0f, 2.0f)] public float buyerProfitPercentage = 0.2f;           // Buyer will offer 30% more (i.e. 130% of) the price quoted
 
 
     // ── CONSERVATOR / EXPERT fields ----------------------------------------------------------------

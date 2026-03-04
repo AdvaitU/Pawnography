@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
-
-/*
+﻿/*
  * ============================================================
  * SCRIPT:      CardDatabase.cs
  * GAMEOBJECT:  GameManager
@@ -39,6 +36,9 @@ using UnityEngine;
  * ============================================================
  */
 
+using System.Collections.Generic;
+using UnityEngine;
+
 public class CardDatabase : MonoBehaviour
 {
 
@@ -74,6 +74,12 @@ public class CardDatabase : MonoBehaviour
     // BuildLookup() - Builds a fast dictionary lookup from category → list of eligible cards.
     // Called once on Awake; Only call again manually if you add cards at runtime (rare case scenario).
     // Two step process to create Categories as keys and Lists of cards by category as values. Dictionary ensures the second step of the card selection process can use only cards with the right category key to make it a lot more efficient.
+
+    /// <summary>
+    /// Builds the internal category→cards dictionary for fast lookup.
+    /// Called once on Awake. Only call again manually if cards are
+    /// added to allCards at runtime.
+    /// </summary>
     public void BuildLookup()
     {
         cardsByCategory = new Dictionary<CardCategory, List<CardData>>();
@@ -109,6 +115,13 @@ public class CardDatabase : MonoBehaviour
     // This is Step 1 of the 2 step algorithm - Picks a category using weighted random selection.
     // Only categories with canSpawn = true and spawnWeight > 0 are eligible.
     // Returns null if no eligible category exists.
+
+    /// <summary>
+    /// Step 1 of the two-step spawn algorithm. Picks a CardCategory
+    /// using weighted random selection. Only categories with
+    /// canSpawn = true and spawnWeight > 0 are eligible.
+    /// Returns null if no eligible category exists.
+    /// </summary>
     public CardCategory PickRandomCategory()
     {
         
@@ -162,6 +175,13 @@ public class CardDatabase : MonoBehaviour
     // Only cards with canSpawn = true and spawnWeight > 0 are eligible.
     // Returns null if no eligible card exists in the category.
     // Called using the CardCategory chosen in Step 1 as an argument.
+
+    /// <summary>
+    /// Step 2 of the two-step spawn algorithm. Given a category,
+    /// picks a specific CardData using weighted random selection.
+    /// Only cards with canSpawn = true and spawnWeight > 0 are eligible.
+    /// Returns null if no eligible card exists in the category.
+    /// </summary>
     public CardData PickRandomCardFromCategory(CardCategory category)
     {
         if (!cardsByCategory.ContainsKey(category))    // Failsafe - If no cards of chosen category are present in the Dictionary i.e. Dictionary does not have a key of that CardCategory, return null and log a warning.
@@ -207,6 +227,12 @@ public class CardDatabase : MonoBehaviour
     // Convenience method that simply runs the above two methods one by one
     // Failsafe to return null if no category is chosen by PickRandomCategory
     // Can be called as many times as the cards to spawn by DrawRoundCards(noOfCards)
+
+    /// <summary>
+    /// Convenience wrapper that runs PickRandomCategory() then
+    /// PickRandomCardFromCategory(). Returns null if no category
+    /// or no card is found.
+    /// </summary>
     public CardData PickRandomCard()
     {
         CardCategory category = PickRandomCategory();
@@ -219,6 +245,13 @@ public class CardDatabase : MonoBehaviour
     // Returns a list of CardData objects to then be rendered.
     // Called by RoundManager() who then supplies CardData objects to UI and Interaction Handlers as well
     // Default count is 3 i.e. starting count of the game.
+
+    /// <summary>
+    /// Draws a hand of n cards by calling PickRandomCard() n times.
+    /// Prevents duplicates if the eligible pool is large enough.
+    /// Logs a warning if fewer than count cards could be drawn.
+    /// Called by RoundManager.StartNewRound().
+    /// </summary>
     public List<CardData> DrawRoundCards(int count = 3)
     {
         List<CardData> drawn = new List<CardData>();
@@ -269,6 +302,12 @@ public class CardDatabase : MonoBehaviour
 
     // ResetAllSpawnTracking -------------------------------------------------------
     // Resets the totalSpawnedThisRun to 0 in Awake() i.e. when new run begins
+
+    /// <summary>
+    /// Resets timesSpawnedThisRun on all cards and totalSpawnedThisRun
+    /// on all categories to 0. Called on Awake to prevent stale
+    /// ScriptableObject values persisting between Editor Play sessions.
+    /// </summary>
     public void ResetAllSpawnTracking()
     {
         foreach (CardCategory cat in allCategories)

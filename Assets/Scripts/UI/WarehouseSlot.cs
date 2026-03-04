@@ -25,6 +25,11 @@ using TMPro;
 
 public class WarehouseSlot : MonoBehaviour
 {
+    [Tooltip("The art image displayed in this warehouse slot. " +
+         "Set to grey placeholder colour when the slot is empty.")]
     public Image artImage;
+
+    [Tooltip("The item name label for this slot. " +
+         "Currently left empty by WarehousePanelUI.PopulateSlot().")]
     public TextMeshProUGUI nameText;
 }

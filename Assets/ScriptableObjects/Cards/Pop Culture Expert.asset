@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ab2ab7d367e4af345bb77b98e447490a, type: 3}
   m_Name: Pop Culture Expert
   m_EditorClassIdentifier: 
-  cardName: 
+  cardName: Mrs. Strombabolous
   cardDescription: The self styled voice of this generation, Mrs. Strombabolous excels
     at spotting notable collector's items from the late 50s all the way to the modern
     day. And now her services can be yours!
@@ -21,15 +21,13 @@ MonoBehaviour:
   subCategory: 0
   canSpawn: 1
   spawnWeight: 10
-  timesSpawnedThisRun: 0
+  timesSpawnedThisRun: 2
   itemBuyCost: 0
   itemTrueValue: 0
   valueIsHidden: 1
   itemCondition: 50
   buyerDesiredItemType: 0
-  buyerOfferedPrice: 0
-  buyerInterestPercentage: 30
-  buyerDisinterestPercentage: 60
+  buyerProfitPercentage: 0.2
   isConservator: 0
   conservatorExpertise: 2
   conservatorUpgradePercentage: 10

@@ -64,7 +64,12 @@ public class CardInteractionManager : MonoBehaviour
     }
 
     // SELLER CARDS -----------------------------------------------------------------------------
-
+    /// <summary>
+    /// Spends gold, adds the purchased item to inventory, and updates
+    /// the HUD. Requires staged.purchaseConfirmed to be true.
+    /// Re-checks inventory space and shows the warehouse-full warning
+    /// popup if needed.
+    /// </summary>
     private void ExecuteSeller(StagedCardData staged)
     {
         CardData card = staged.card;   // Local card data copied from 
@@ -90,7 +95,11 @@ public class CardInteractionManager : MonoBehaviour
     }
 
     // BUYER CARDS --------------------------------------------------------------------------------
-
+    /// <summary>
+    /// Calculates the sell price (appraisedValue if appraised, otherwise
+    /// itemBuyCost + 20%), removes the chosen item from inventory,
+    /// and adds gold to the player's balance. Requires staged.chosenItem.
+    /// </summary>
     private void ExecuteBuyer(StagedCardData staged)
     {
         CardData card = staged.card;
@@ -104,12 +113,8 @@ public class CardInteractionManager : MonoBehaviour
 
         InventoryItem item = staged.chosenItem;
 
-        int itemSellCost = item.sourceCard.itemBuyCost + Mathf.RoundToInt(item.sourceCard.itemBuyCost * 0.2f);  // Sell cost is 20% (hard coded)
+        int itemSellCost = item.sourceCard.itemBuyCost + Mathf.RoundToInt(item.sourceCard.itemBuyCost * item.sourceCard.buyerProfitPercentage);  // Sell cost is 20% more by default
         if (item.isAppraised) itemSellCost = item.appraisedValue;
-
-        //int trueValue = item.sourceCard != null ? item.sourceCard.itemTrueValue : 0;
-        //int payout = Mathf.Max(card.buyerOfferedPrice, trueValue);
-
         
 
         InventoryManager.Instance.TryRemoveItem(item);                                           // Remove the item from the inventory
@@ -121,7 +126,10 @@ public class CardInteractionManager : MonoBehaviour
     }
 
     // CONSERVATOR/EXPERT CARDS ----------------------------------------------------------------------
-
+    /// <summary>
+    /// Opens the conservator item selection popup. On item chosen,
+    /// calls ApplyConservatorToItem() and refreshes the HUD.
+    /// </summary>
     private void ExecuteConservator(CardData card)
     {
         PopupManager.Instance.OpenConservatorItemSelection(
@@ -136,11 +144,17 @@ public class CardInteractionManager : MonoBehaviour
             onCancel: () => Debug.Log("[CardInteractionManager] Appraisal cancelled.")
         );
     }
-
+    /// <summary>
+    /// Applies conservator appraisal and optional restoration to an
+    /// inventory item. If the conservator's expertise matches the item's
+    /// subCategory and isConservator is true, adds upgradePercentage%
+    /// to itemTrueValue and sets it as appraisedValue. Otherwise applies
+    /// nonExpertiseMultiplier to itemTrueValue.
+    /// </summary>
     private void ApplyConservatorToItem(CardData conservator, InventoryItem item)
     {
         item.isAppraised = true;
-        item.sourceCard.valueIsHidden = false;    // Sets the value to be visible if it was hidden before
+        item.valueIsRevealed = true;    // Sets the value to be visible if it was hidden before
 
         bool isExpertise = conservator.conservatorExpertise != CardSubCategory.None &&
                            item.sourceCard.subCategory != CardSubCategory.None &&
@@ -151,7 +165,7 @@ public class CardInteractionManager : MonoBehaviour
             if (conservator.isConservator == true)    // If it is both upgrade and appraisal, apply the upgrade first.
             {
                 int addedValue = Mathf.RoundToInt(item.sourceCard.itemTrueValue * conservator.conservatorUpgradePercentage / 100f);  // Calculate the added value from the upgrade percentage
-                item.appraisedValue = item.sourceCard.itemTrueValue += addedValue;  // Set the appraised value to the new true value after upgrade
+                item.appraisedValue = item.sourceCard.itemTrueValue + addedValue;  // Set the appraised value to the new true value after upgrade
             }
             else
             {
@@ -186,7 +200,11 @@ public class CardInteractionManager : MonoBehaviour
 
 
     // CONTRACTOR CARDS -----------------------------------------------------------------------------
-
+    /// <summary>
+    /// Re-checks affordability at execution time, spends gold, and applies
+    /// the contractor upgrade via ShopManager.ApplyUpgrade().
+    /// Note: OpenContractorConfirmation() popup is currently not called here.
+    /// </summary>
     private void ExecuteContractor(CardData card)
     {
         int cost = EconomyManager.Instance.GetContractorCost(card);
@@ -205,7 +223,10 @@ public class CardInteractionManager : MonoBehaviour
 
 
     // FREELANCER CARDS -----------------------------------------------------------------------------
-
+    /// <summary>
+    /// Re-checks affordability at execution time, spends gold, and sends
+    /// the freelancer out via FreelancerManager.SendOutFreelancer().
+    /// </summary>
     private void ExecuteFreelancer(CardData card)
     {
         int cost = EconomyManager.Instance.GetFreelancerCost(card);
