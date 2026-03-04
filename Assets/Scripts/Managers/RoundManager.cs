@@ -49,7 +49,10 @@ public class RoundManager : MonoBehaviour
     [Tooltip("Number of cards that can be selected per round")]
     public int maxSelectionsPerRound = 2;
     [Tooltip("Interval between boss rounds. 8 means every 8th round is a boss round starting from Round 8.")]
-    public int bossRoundInterval = 8;
+    public int bossRoundInterval = 7;
+    [Tooltip("If true, auction rounds are skipped and treated as normal rounds. " +
+         "For testing only — disable before shipping.")]
+    public bool disableAuctionRounds = false;
 
     [Header("Runtime State")]
     public int currentRound = 0;
@@ -86,24 +89,25 @@ public class RoundManager : MonoBehaviour
     // StartNewRound() method ----------------------------------------------------------------------
     // Called by ShopManager. Conditional for boss round executed here. Invokes the relevant event.
 
-    /// <summary>
+    //// <summary>
     /// Increments the round counter, clears staged cards, and checks
-    /// whether this is a boss round. Boss rounds fire onBossRoundStart
-    /// only. Normal rounds draw cards and fire onRoundStart.
+    /// whether this is an auction round. Auction rounds fire onBossRoundStart
+    /// and route to AuctionManager. Normal rounds draw cards and fire onRoundStart.
     /// Called by ShopManager.Start() for the first round and by
     /// ProcessAndEndRound() for all subsequent rounds.
     /// </summary>
     public void StartNewRound()
     {
-        currentRound++;      // Raise round number
-        stagedCards.Clear(); // Clear list of Staged Cards (called after execution is managed by CardInteractionManager)
+        currentRound++;
+        stagedCards.Clear();        // Add to round number and clear the staged cards (they should already have been executed)
 
-        isBossRound = (currentRound % bossRoundInterval == 0);
+        isBossRound = !disableAuctionRounds && (currentRound % bossRoundInterval == 0);      // Every 7th round
 
         if (isBossRound)
         {
-            Debug.Log($"[RoundManager] BOSS ROUND {currentRound}");
-            onBossRoundStart?.Invoke();                                // Invoke Boss Round event if isBossRound is true - check done before other round checks.
+            Debug.Log($"[RoundManager] Round Number {currentRound} - AUCTION ROUND {currentRound/7}");
+            onBossRoundStart?.Invoke();
+            AuctionManager.Instance.BeginAuction();
         }
         else
         {
@@ -112,6 +116,20 @@ public class RoundManager : MonoBehaviour
                       $"Drew {currentRoundCards.Count} cards.");
             onRoundStart?.Invoke();
         }
+    }
+
+    // TriggerGameOver() -----------------------------------------------------------------------------------
+    // Currently does nothing except logging, more functionality to be added here.
+    /// <summary>
+    /// Triggers the game over state. Fires onGameOver.
+    /// Called by AuctionManager when the final selling amount
+    /// does not meet the auction threshold. Expand this method
+    /// when building the Game Over screen and run progression system.
+    /// </summary>
+    public void TriggerGameOver()
+    {
+        Debug.Log("[RoundManager] GAME OVER.");
+        onGameOver?.Invoke();
     }
 
     // StageCard (card) -----------------------------------------------------------------------------------
@@ -209,19 +227,7 @@ public class RoundManager : MonoBehaviour
         StartNewRound();
     }
 
-    // TriggerGameOver() -----------------------------------------------------------------------------------
-    // Currently does nothing except logging, more functionality to be added here.
+    
 
-    /// <summary>
-    /// Triggers the game over state. Fires onGameOver.
-    /// Called by EconomyManager when the boss round income
-    /// threshold is not met. Expand this method when building
-    /// the Game Over screen and run progression system.
-    /// </summary>
-    public void TriggerGameOver()
-    {
-        Debug.Log("[RoundManager] GAME OVER.");
-        onGameOver?.Invoke();
-    }
 
 }

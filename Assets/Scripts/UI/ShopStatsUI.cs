@@ -106,14 +106,14 @@ public class ShopStatsUI : MonoBehaviour
         {
             int interval = RoundManager.Instance.bossRoundInterval;
             int current = RoundManager.Instance.currentRound;
-            int roundsUntilBoss = interval - (current % interval);
+            int roundsUntilAuction = interval - (current % interval);
 
             if (current % interval == 0 && current > 0)
-                roundsUntilBoss = 0;
+                roundsUntilAuction = 0;
 
-            bossCountdownText.text = roundsUntilBoss == 0
-                ? "⚔️ BOSS ROUND"
-                : $"⚔️ Boss in {roundsUntilBoss}";
+            bossCountdownText.text = roundsUntilAuction == 0
+                ? "🔨 AUCTION"
+                : $"🔨 Auction in {roundsUntilAuction}";
         }
     }
 

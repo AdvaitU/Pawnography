@@ -64,6 +64,13 @@ public class PopupManager : MonoBehaviour
     [Tooltip("Prefab for an inventory item row button used in item selection lists.")]
     public GameObject itemRowPrefab;
 
+    [Header("Positioning")]
+    [Tooltip("Reference to the Canvas for screen space calculations.")]
+    public Canvas parentCanvas;
+
+    [Tooltip("Padding below the source card in pixels.")]
+    public Vector2 screenPadding = new Vector2(20f, 20f);
+
     private void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
@@ -79,7 +86,8 @@ public class PopupManager : MonoBehaviour
 
     /// <summary>
     /// Clears all previous buttons and content, then shows the popup
-    /// with a title and body message.
+    /// with a title and body message, positioned below the source card.
+    /// Pass null for sourceRect to fall back to bottom-left corner.
     /// </summary>
     public void OpenPopup(string title, string body)
     {
@@ -145,7 +153,7 @@ public class PopupManager : MonoBehaviour
         {
             // Show item name and appraisal status
             string valueStr = item.isAppraised ? $"{item.appraisedValue}g" : "???";
-            rowText.text = $"{item.cardName}  |  Value: {valueStr}  |  Paid: {item.purchasePrice}g";
+            rowText.text = $"{item.cardName} - Value: {valueStr}, Paid: {item.purchasePrice}g";
         }
 
         rowBtn.onClick.AddListener(() => onItemSelected(item));
@@ -221,7 +229,7 @@ public class PopupManager : MonoBehaviour
 
         OpenPopup(
             $"Appraise with: {conservatorCard.cardName}",
-            $"Expertise: {conservatorCard.conservatorExpertise}%\n\n" +
+            $"Expertise: {conservatorCard.conservatorExpertise}\n" +
             $"Choose an item to appraise:"
         );
 

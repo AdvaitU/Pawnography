@@ -230,6 +230,7 @@ public class CardUI : MonoBehaviour
             {
                 Debug.Log($"[CardUI] Buyer item selection cancelled.");
             }
+
         );
     }
 

@@ -66,6 +66,9 @@ public class CardUIManager : MonoBehaviour
 
     private void OnRoundStart()
     {
+        // Auction rounds are handled entirely by AuctionManager and AuctionUI.
+        if (RoundManager.Instance.isBossRound) return;  // Don't fire the rest of the events if it is an Auction round
+
         ClearCards();
         SpawnCards();
         UpdateHUD();

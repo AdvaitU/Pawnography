@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 /*
  * ============================================================
@@ -46,6 +47,9 @@ public class CardData : ScriptableObject
 
     [Tooltip("Sub-category label for Item based on CardSubCategory")]
     public CardSubCategory subCategory;
+
+    [Tooltip("Descriptive tags that further contextualise this item for auction lot matching.")]
+    public List<string> tags = new List<string>();
 
     [Header("Spawning")]
     [Tooltip("Can be set false to lock card spawning, and true to unlock it")]

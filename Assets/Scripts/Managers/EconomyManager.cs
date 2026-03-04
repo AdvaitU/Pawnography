@@ -124,8 +124,6 @@ public class EconomyManager : MonoBehaviour
         currentGold = startingGold;  
         currentThreshold = baseThreshold;
 
-        RoundManager.Instance.onBossRoundStart.AddListener(OnBossRoundStarted); // Subscribe to boss round event from RoundManager
-
         onGoldChanged?.Invoke();
         Debug.Log($"[EconomyManager] Starting gold: {currentGold}g. " +
                   $"First boss round threshold: {currentThreshold}g.");
@@ -237,48 +235,42 @@ public class EconomyManager : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────
-    // BOSS ROUND
+    // AUCTION
     // ─────────────────────────────────────────────
 
     /// <summary>
-    /// Called by RoundManager when a boss round starts.
-    /// Checks whether the player has met the income threshold this cycle.
+    /// Adds the final auction selling amount to the player's gold.
+    /// Called by AuctionManager when the auction resolves successfully.
     /// </summary>
-    private void OnBossRoundStarted()
+    public void AddAuctionProceeds(int amount)              // Called when the auction is over, but the game is not
     {
-        CheckBossRoundThreshold();
+        AddGold(amount, "Auction proceeds");
     }
 
-    // THIS NEEDS TO BE CHANGED WHEN BUILDING THE BOSS ROUND SYSTEM — currently just checks income against threshold and triggers pass/fail events. 
     /// <summary>
-    /// Checks incomeThisCycle against currentThreshold.
-    /// Pass: escalates threshold, resets cycle income.
-    /// Fail: immediate game over.
+    /// Deducts the rent and bills amount from the player's gold.
+    /// Amount is equal to currentThreshold at time of calling.
+    /// Called by AuctionManager at the start of the round immediately
+    /// following a passed auction round.
+    /// Escalates the threshold for the next auction cycle.
     /// </summary>
-    public void CheckBossRoundThreshold()
+    public void DeductRentAndBills()
     {
-        Debug.Log($"[EconomyManager] Boss round check — " +
-                  $"income: {incomeThisCycle}g / threshold: {currentThreshold}g.");
+        int rent = currentThreshold;      // First, sets rent as the current threshold
 
-        if (incomeThisCycle >= currentThreshold)
-        {
-            bossRoundsCompleted++;
+        // Escalate threshold for next cycle before deducting
+        int newThreshold = Mathf.RoundToInt(
+            (currentThreshold + thresholdIncreaseFlat) * thresholdScalingMultiplier);
+        currentThreshold = newThreshold;                                 // Then increases the threshold for the next auction
+        incomeThisCycle = 0;
+        bossRoundsCompleted++;
 
-            int newThreshold = Mathf.RoundToInt(
-                (currentThreshold + thresholdIncreaseFlat) * thresholdScalingMultiplier);
-            currentThreshold = newThreshold;
-            incomeThisCycle = 0;
+        TrySpendGold(rent, "Rent and bills");
 
-            Debug.Log($"[EconomyManager] Boss round PASSED. Next threshold: {currentThreshold}g.");
-            onBossRoundPassed?.Invoke();
-        }
-        else
-        {
-            // Immediate game over — no grace round
-            Debug.Log("[EconomyManager] Boss round FAILED — GAME OVER.");
-            onBossRoundFailed?.Invoke();
-            RoundManager.Instance.TriggerGameOver();
-        }
+        Debug.Log($"[EconomyManager] Rent and bills paid: {rent}g. " +
+                  $"Next auction threshold: {currentThreshold}g.");
+
+        onGoldChanged?.Invoke();
     }
 
     // ─────────────────────────────────────────────
