@@ -75,7 +75,7 @@ public class AuctionManager : MonoBehaviour
     // RUNTIME STATE
     // ─────────────────────────────────────────────
 
-    [Header("Runtime State — view in Play Mode")]
+    [Header("Runtime Stats")]
     [Tooltip("Items the player has selected for the current auction lot.")]
     public List<InventoryItem> currentLot = new List<InventoryItem>();
 
@@ -118,9 +118,8 @@ public class AuctionManager : MonoBehaviour
         RoundManager.Instance.onRoundStart.AddListener(OnRentRoundStart);
     }
 
-    // ─────────────────────────────────────────────
+    // ========================================================================================================
     // METHODS
-    // ─────────────────────────────────────────────
 
     /// <summary>
     /// Entry point called by RoundManager when an auction round is detected.
@@ -148,11 +147,11 @@ public class AuctionManager : MonoBehaviour
     {
         currentLot = new List<InventoryItem>(selectedItems);
 
-        // Remove sold items from inventory immediately
-        foreach (InventoryItem item in currentLot)
-            InventoryManager.Instance.TryRemoveItem(item);
 
-        if (currentLot.Count == 0)
+        foreach (InventoryItem item in currentLot)                
+            InventoryManager.Instance.TryRemoveItem(item);         // Remove sold items from inventory immediately
+
+        if (currentLot.Count == 0)      // If no items are selected, call ResolveAuction() and exit with finalSellingAmount = 0
         {
             finalSellingAmount = 0;
             Debug.Log("[AuctionManager] Empty lot confirmed. Final selling amount: 0.");
@@ -160,7 +159,7 @@ public class AuctionManager : MonoBehaviour
             return;
         }
 
-        finalSellingAmount = CalculateFinalSellingAmount(currentLot);
+        finalSellingAmount = CalculateFinalSellingAmount(currentLot);    // Call the CalculateFinalSellingAmount() method
         Debug.Log($"[AuctionManager] Lot confirmed. Final selling amount: {finalSellingAmount}g.");
 
         onLotConfirmed?.Invoke();
@@ -171,7 +170,7 @@ public class AuctionManager : MonoBehaviour
     /// the cosmetic bid sequence — the highest bid in the cutscene should
     /// equal this value.
     /// </summary>
-    public int GetFinalSellingAmount() => finalSellingAmount;
+    public int GetFinalSellingAmount() => finalSellingAmount;   // Simple getter for AuctionUI
 
     /// <summary>
     /// Resolves the auction by comparing the final selling amount against
@@ -182,18 +181,19 @@ public class AuctionManager : MonoBehaviour
     /// </summary>
     public void ResolveAuction()
     {
-        bool passed = finalSellingAmount >= EconomyManager.Instance.currentThreshold;
-        lastAuctionPassed = passed;
+        // An auction passes if the final selling amount plus current gold meets or exceeds the threshold.
+        bool passed = (finalSellingAmount + EconomyManager.Instance.currentGold) >= EconomyManager.Instance.currentThreshold;
+        lastAuctionPassed = passed;  // Set flag to passed
 
         Debug.Log($"[AuctionManager] Auction resolved. " +
-                  $"Sold: {finalSellingAmount}g / " +
-                  $"Threshold: {EconomyManager.Instance.currentThreshold}g. " +
+                  $"Sold for {finalSellingAmount}g " +
+                  $"against a threshold of {EconomyManager.Instance.currentThreshold}g.\n " +
                   $"Result: {(passed ? "PASS" : "FAIL")}");
 
         if (passed)
         {
-            EconomyManager.Instance.AddAuctionProceeds(finalSellingAmount);
-            rentPendingNextRound = true;
+            EconomyManager.Instance.AddAuctionProceeds(finalSellingAmount);   // Adds the final selling amount to the player's gold immediately on pass
+            rentPendingNextRound = true;   // Sets true so gold will be removed at the beginning of the next round
         }
 
         onAuctionResolved?.Invoke(passed);
@@ -209,45 +209,44 @@ public class AuctionManager : MonoBehaviour
     /// </summary>
     private void OnRentRoundStart()
     {
-        if (!rentPendingNextRound) return;
+        if (!rentPendingNextRound) return;  // Safeguard
 
-        rentPendingNextRound = false;
+        rentPendingNextRound = false;   // Sets boolean flag to false so this is not repeated in the next i.e. 9th round.
         EconomyManager.Instance.DeductRentAndBills();
         Debug.Log("[AuctionManager] Rent and bills deducted for this cycle.");
     }
 
-    // ─────────────────────────────────────────────
-    // FINAL SELLING AMOUNT CALCULATION
-    // ─────────────────────────────────────────────
+    // =========================================================================================================
+    // FINAL SELLING AMOUNT CALCULATION ------------------------------------------------------------------------
 
     /// <summary>
     /// Master calculation method. Runs all three stages and returns
     /// the final selling amount rounded up to the nearest int ending in 0 or 5.
     /// </summary>
-    private int CalculateFinalSellingAmount(List<InventoryItem> lot)
+    private int CalculateFinalSellingAmount(List<InventoryItem> lot)  // pass a full lot to the method
     {
-        float lotBasePrice = CalculateStageOne(lot);
-        float multiplier = CalculateStageTwo(lot);
-        float bossCondition = CalculateStageThree();
+        float lotBasePrice = CalculateStageOne(lot);      // Stage 1
+        float multiplier = CalculateStageTwo(lot);        // Stage 2
+        float bossCondition = CalculateStageThree();      // Stage 3
 
-        float raw = lotBasePrice * multiplier * bossCondition;
-        return RoundToNearestFiveOrZero(raw);
+        float raw = lotBasePrice * multiplier * bossCondition;  // Stage 4 - Multiplying and rounding up to nearest multiple of 5.
+        return RoundToNearestMultipleOfFive(raw);
     }
 
     /// <summary>
     /// Stage 1 — Calculates the Lot Base Price.
-    /// For each item: a = base value, b = weighted random roll (0.8–2.0),
+    /// For each item: a = base value, b = weighted random roll (0.8 – 2.0),
     /// c = a * b. Returns the sum of all c values.
     /// </summary>
-    private float CalculateStageOne(List<InventoryItem> lot)
+    private float CalculateStageOne(List<InventoryItem> lot)   // STAGE 1 ========================================
     {
         float lotBasePrice = 0f;
 
-        foreach (InventoryItem item in lot)
+        foreach (InventoryItem item in lot)                // For each item in the lot
         {
-            float a = CalculateItemBaseValue(item);
-            float b = RollWeightedMultiplier();
-            float c = a * b;
+            float a = CalculateItemBaseValue(item);        // Step 1
+            float b = RollWeightedMultiplier();            // Step 2
+            float c = a * b;                               // Step 3
 
             Debug.Log($"[AuctionManager] Stage 1 — '{item.cardName}': " +
                       $"a={a}, b={b:F2}, c={c:F2}");
@@ -264,14 +263,14 @@ public class AuctionManager : MonoBehaviour
     /// If appraised: a = appraisedValue.
     /// If not appraised: a = lower of (buyPrice + 20%) or itemTrueValue.
     /// </summary>
-    private float CalculateItemBaseValue(InventoryItem item)
+    private float CalculateItemBaseValue(InventoryItem item) // STAGE 1, STEP 1 --------------------------------
     {
-        if (item.isAppraised)
+        if (item.isAppraised)            // No calculations or rolls if item is already appraised.
             return item.appraisedValue;
 
-        float buyPlusTwenty = item.purchasePrice * 1.2f;
+        float buyPlusTwenty = item.purchasePrice * 1.2f;       // Standard base for unappraised items with 20% profit margin added (so the actual least they can get for it based on the roll is the buy price)
         float trueValue = item.sourceCard != null ? item.sourceCard.itemTrueValue : 0f;
-        return Mathf.Min(buyPlusTwenty, trueValue);
+        return Mathf.Min(buyPlusTwenty, trueValue);   // Return the lower of the two values to prevent unappraised items from being worth more than their true value, while still giving a profit margin on the buy price if the true value is very high.
     }
 
     /// <summary>
@@ -279,13 +278,15 @@ public class AuctionManager : MonoBehaviour
     /// 66% chance to sample uniformly from 0.8–1.2.
     /// 33% chance to sample uniformly from 1.2–2.0.
     /// </summary>
-    private float RollWeightedMultiplier()
+    private float RollWeightedMultiplier()                  // STAGE 1, STEP 2 --------------------------------
     {
-        float roll = Random.value; // 0.0 to 1.0
-        if (roll < 0.6667f)
-            return Random.Range(0.8f, 1.2f);
-        else
-            return Random.Range(1.2f, 2.0f);
+        float roll = Random.value; // From 0.0 to 1.0
+        if (roll < 0.01f)                         // 1% chance for item to go "unsold" and contribute 0 to the lot price
+            return 0.0f;
+        else if (roll < 0.6667f)                      // 66% change to
+            return Random.Range(0.8f, 1.2f);     // Roll a value between 80% and 120% of the base price
+        else                                     // Or a 33% chance to
+            return Random.Range(1.2f, 2.0f);     // Roll a value between 120% and 200% of the base price
     }
 
     /// <summary>
@@ -293,12 +294,12 @@ public class AuctionManager : MonoBehaviour
     /// d = 1.0 base. e = subCategory pair bonus. f = shared tag bonus.
     /// Items with subCategory == None are excluded from both e and f.
     /// </summary>
-    private float CalculateStageTwo(List<InventoryItem> lot)
+    private float CalculateStageTwo(List<InventoryItem> lot) // STAGE 2 ========================================
     {
         float d = 1.0f;
-        float e = CalculateSubCategoryBonus(lot);
-        float f = CalculateTagBonus(lot);
-        float g = Mathf.Min(d + e + f, 3.0f);
+        float e = CalculateSubCategoryBonus(lot);     // Step 1
+        float f = CalculateTagBonus(lot);             // Step 2 
+        float g = Mathf.Min(d + e + f, 3.0f);         // Step 3 - Cap it at 3.0f
 
         Debug.Log($"[AuctionManager] Stage 2 — d={d}, e={e:F2}, f={f:F2}, g={g:F2}");
         return g;
@@ -310,30 +311,32 @@ public class AuctionManager : MonoBehaviour
     /// adds n*(n-1)/2 pairs * 0.2f.
     /// Items with subCategory == None are excluded.
     /// </summary>
-    private float CalculateSubCategoryBonus(List<InventoryItem> lot)
+    private float CalculateSubCategoryBonus(List<InventoryItem> lot) // STAGE 2, STEP 1 --------------------------------
     {
         // Count how many items belong to each subCategory
         Dictionary<CardSubCategory, int> categoryCounts =
-            new Dictionary<CardSubCategory, int>();
+            new Dictionary<CardSubCategory, int>();               // Create a dictionary for quick lookup of subCategory counts
 
+        // For each lot item, check its subCategory and increment the count for that subCategory in the dictionary
         foreach (InventoryItem item in lot)
         {
-            if (item.sourceCard == null) continue;
-            if (item.sourceCard.subCategory == CardSubCategory.None) continue;
+            if (item.sourceCard == null) continue;   // Safeguard against null reference
+            if (item.sourceCard.subCategory == CardSubCategory.None) continue;  // Same as above
 
             CardSubCategory sub = item.sourceCard.subCategory;
-            if (!categoryCounts.ContainsKey(sub))
+            if (!categoryCounts.ContainsKey(sub))     // If that key doesn't exist yet in the dictionary, add it with a starting count of 0
                 categoryCounts[sub] = 0;
-            categoryCounts[sub]++;
+            categoryCounts[sub]++;              // Increment the count for that subCategory
         }
 
-        // For each group of n items sharing a subCategory,
-        // number of pairs = n * (n - 1) / 2
+        // For each group of n items sharing a subCategory.
+        // Number of pairs = n * (n - 1) / 2  (n squared minus n, divided by 2)
         float e = 0f;
+        // For each subCategory count in the dictionary
         foreach (int count in categoryCounts.Values)
         {
-            int pairs = count * (count - 1) / 2;
-            e += pairs * 0.2f;
+            int pairs = count * (count - 1) / 2;   // Calculate the number of pairs using the combinatorial formula
+            e += pairs * 0.2f;                     // FOr each pair, add 0.2f to 'e'
         }
 
         return e;
@@ -344,13 +347,13 @@ public class AuctionManager : MonoBehaviour
     /// in the lot. Each qualifying tag contributes exactly 0.1f once.
     /// Items with subCategory == None are excluded from tag matching.
     /// </summary>
-    private float CalculateTagBonus(List<InventoryItem> lot)
+    private float CalculateTagBonus(List<InventoryItem> lot)         // STAGE 2, STEP 2 --------------------------------
     {
-        Dictionary<string, int> tagCounts = new Dictionary<string, int>();
+        Dictionary<string, int> tagCounts = new Dictionary<string, int>();  // Single dictionary that holds all unique tags as keys and counts as values.
 
         foreach (InventoryItem item in lot)
         {
-            if (item.sourceCard == null) continue;
+            if (item.sourceCard == null) continue;                               // Safeguards
             if (item.sourceCard.subCategory == CardSubCategory.None) continue;
             if (item.sourceCard.tags == null) continue;
 
@@ -358,22 +361,22 @@ public class AuctionManager : MonoBehaviour
             // for one item that has duplicate tag entries
             HashSet<string> seenForThisItem = new HashSet<string>();
 
-            foreach (string tag in item.sourceCard.tags)
+            foreach (string tag in item.sourceCard.tags)           // For each item, add unique tags as keys and increment counts of tags seen before.
             {
-                if (string.IsNullOrWhiteSpace(tag)) continue;
-                string normalisedTag = tag.Trim().ToLower();
+                if (string.IsNullOrWhiteSpace(tag)) continue;    // Safeguard against empty or whitespace tags
+                string normalisedTag = tag.Trim().ToLower();     // Remove leading/trailing whitespace and convert to lowercase
 
                 if (seenForThisItem.Contains(normalisedTag)) continue;
                 seenForThisItem.Add(normalisedTag);
 
                 if (!tagCounts.ContainsKey(normalisedTag))
-                    tagCounts[normalisedTag] = 0;
-                tagCounts[normalisedTag]++;
+                    tagCounts[normalisedTag] = 0;          // If the tag is not yet in the dictionary, add it with a starting count of 0
+                tagCounts[normalisedTag]++;                // Increment the count for that tag
             }
         }
 
         float f = 0f;
-        foreach (int count in tagCounts.Values)
+        foreach (int count in tagCounts.Values)       // For each unique tag, if it appears in 2 or more items, add 0.1f to 'f' once.
         {
             if (count >= 2)
                 f += 0.1f;
@@ -387,7 +390,7 @@ public class AuctionManager : MonoBehaviour
     /// Currently a placeholder returning 1.0f.
     /// Replace with condition-specific logic when boss conditions are designed.
     /// </summary>
-    private float CalculateStageThree()
+    private float CalculateStageThree()       // STAGE 3 ======================================== PLACEHOLDER ====================
     {
         // ── Add boss round condition logic here in future ──
         return 1.0f;
@@ -397,11 +400,11 @@ public class AuctionManager : MonoBehaviour
     /// Rounds a float up to the nearest integer ending in 0 or 5.
     /// E.g. 347 → 350, 351 → 355, 343 → 345.
     /// </summary>
-    private int RoundToNearestFiveOrZero(float value)
+    private int RoundToNearestMultipleOfFive(float value) // STAGE 4 — FINAL ROUNDING ========================================
     {
-        int ceiled = Mathf.CeilToInt(value);
-        int remainder = ceiled % 5;
-        if (remainder == 0) return ceiled;
-        return ceiled + (5 - remainder);
+        int ceiled = Mathf.CeilToInt(value);         // "Round up to nearest integer if float
+        int remainder = ceiled % 5;                  // Divide by 5 and get remainder to nearest multiple of 5    
+        if (remainder == 0) return ceiled;           // If 0, number is already good. Return it
+        return ceiled + (5 - remainder);             // If not, add the difference to get to the nearest multiple of 5 above the number.
     }
 }

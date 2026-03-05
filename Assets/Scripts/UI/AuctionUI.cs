@@ -209,6 +209,10 @@ public class AuctionUI : MonoBehaviour
         Button slotButton = slotObj.GetComponent<Button>();
         GameObject selectedOverlay = slotObj.transform.Find("SelectedOverlay")?.gameObject;
 
+        WarehouseSlotHover hoverHandler = slotObj.GetComponent<WarehouseSlotHover>();
+        if (hoverHandler != null)
+            hoverHandler.SetItemData(item);
+
         if (slot != null)
         {
             bool hasArt = item.sourceCard != null && item.sourceCard.cardArt != null;
@@ -360,9 +364,10 @@ public class AuctionUI : MonoBehaviour
             return bids;
         }
 
+        //AuctionManager.Instance.
         // First bid: random rounded value between 50% and 90% of finalAmount
-        int firstBidRaw = Mathf.RoundToInt(Random.Range(finalAmount * 0.5f,
-                                                         finalAmount * 0.9f));
+        int firstBidRaw = Mathf.RoundToInt(Random.Range(finalAmount * 0.2f,
+                                                         finalAmount * 0.6f));
         bids.Add(RoundToNearestFiveOrZero(firstBidRaw));
 
         // Intermediate bids: each between previous bid and finalAmount
@@ -371,7 +376,9 @@ public class AuctionUI : MonoBehaviour
             int prev = bids[bids.Count - 1];
             if (prev >= finalAmount) break;
 
-            int nextRaw = Mathf.RoundToInt(Random.Range(prev, finalAmount));
+            int nextRaw = 0;          
+            if (i == bidCount - 1) nextRaw = finalAmount;                               // Ensure the last intermediate bid reaches the finalAmount
+            else nextRaw = Mathf.RoundToInt(Random.Range(prev + 5, finalAmount));      // It will be at least 10 higher than the previous bid to ensure noticeable increases
             bids.Add(RoundToNearestFiveOrZero(nextRaw));
         }
 
