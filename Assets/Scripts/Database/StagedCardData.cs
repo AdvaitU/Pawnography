@@ -38,6 +38,11 @@ public class StagedCardData
     [Tooltip("For Buyer cards — the inventory item the player chose to sell.")]
     public InventoryItem chosenItem;
 
+    [Tooltip("For Conservator and Buyer cards — set when the player targets a " +
+         "pending seller card instead of an existing inventory item. " +
+         "Resolved to an InventoryItem at execution time after the seller runs.")]
+    public StagedCardData pendingSellerTarget;
+
     [Tooltip("For Seller cards — true if the player confirmed the purchase via popup.")]
     public bool purchaseConfirmed;
 

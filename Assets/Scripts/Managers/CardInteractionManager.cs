@@ -50,10 +50,10 @@ public class CardInteractionManager : MonoBehaviour
 
         switch (card.category.categoryName)                       // Strings need to match exact category name because CardCategory does not contain an enum
         {
-            case "Seller": ExecuteSeller(staged); break;
+            case "Seller": ExecuteSeller(staged); break;               // First 3 work off of staged cards
             case "Buyer": ExecuteBuyer(staged); break;
-            case "Conservator": ExecuteConservator(card); break;
-            case "Contractor": ExecuteContractor(card); break;
+            case "Conservator": ExecuteConservator(staged); break;
+            case "Contractor": ExecuteContractor(card); break;         // The last two are applied instantly
             case "Freelancer": ExecuteFreelancer(card); break;
             // ── Add new cases here ──
             default:
@@ -61,6 +61,18 @@ public class CardInteractionManager : MonoBehaviour
                                  $"'{card.category.categoryName}'.");
                 break;
         }
+    }
+
+    /// <summary>
+    /// Finds the InventoryItem that was added to inventory by a pending seller
+    /// card that has since executed. Matches by sourceCard reference.
+    /// Returns null if the item was not found (e.g. inventory was full and
+    /// the seller failed to add it).
+    /// </summary>
+    private InventoryItem ResolveItemFromPendingSeller(StagedCardData pendingSeller)
+    {
+        return InventoryManager.Instance.items.Find(
+            i => i.sourceCard == pendingSeller.card);
     }
 
     // SELLER CARDS -----------------------------------------------------------------------------
@@ -100,9 +112,24 @@ public class CardInteractionManager : MonoBehaviour
     /// itemBuyCost + 20%), removes the chosen item from inventory,
     /// and adds gold to the player's balance. Requires staged.chosenItem.
     /// </summary>
+
     private void ExecuteBuyer(StagedCardData staged)
     {
         CardData card = staged.card;
+
+        // Resolve pending seller target — find the item that was just added
+        // to inventory by the seller executing earlier this round
+        if (staged.chosenItem == null && staged.pendingSellerTarget != null)
+        {
+            staged.chosenItem = ResolveItemFromPendingSeller(staged.pendingSellerTarget);
+
+            if (staged.chosenItem == null)
+            {
+                Debug.LogWarning($"[CardInteractionManager] Buyer '{card.cardName}' " +
+                                 $"could not resolve pending seller item — skipping.");
+                return;
+            }
+        }
 
         if (staged.chosenItem == null)
         {
@@ -112,38 +139,51 @@ public class CardInteractionManager : MonoBehaviour
         }
 
         InventoryItem item = staged.chosenItem;
-
         int itemSellCost = item.sourceCard.itemBuyCost + Mathf.RoundToInt(item.sourceCard.itemBuyCost * item.sourceCard.buyerProfitPercentage);  // Sell cost is 20% more by default
         if (item.isAppraised) itemSellCost = item.appraisedValue;
-        
 
-        InventoryManager.Instance.TryRemoveItem(item);                                           // Remove the item from the inventory
-        EconomyManager.Instance.AddGold(itemSellCost, $"Sell {item.cardName} to {card.cardName}");     // Add gold to pocket
-        CardUIManager.Instance.UpdateHUD();                                                      // Update gold value in HUD
+        InventoryManager.Instance.TryRemoveItem(item);
+        EconomyManager.Instance.AddGold(itemSellCost,
+            $"Sell {item.cardName} to {card.cardName}");
+        CardUIManager.Instance.UpdateHUD();
 
-        Debug.Log($"[CardInteractionManager] Sold '{item.cardName}' to '{card.cardName}' " +
-                  $"for {itemSellCost}g.");
+        Debug.Log($"[CardInteractionManager] Sold '{item.cardName}' to " +
+                  $"'{card.cardName}' for {itemSellCost}g.");
     }
 
     // CONSERVATOR/EXPERT CARDS ----------------------------------------------------------------------
     /// <summary>
-    /// Opens the conservator item selection popup. On item chosen,
-    /// calls ApplyConservatorToItem() and refreshes the HUD.
+    /// Reads the pre-chosen item from staged.chosenItem and applies the
+    /// conservator effect directly. The item selection popup was already
+    /// shown on click in CardUI.HandleConservatorClick().
     /// </summary>
-    private void ExecuteConservator(CardData card)
+    private void ExecuteConservator(StagedCardData staged)
     {
-        PopupManager.Instance.OpenConservatorItemSelection(
-            card,
-            InventoryManager.Instance.items,
-            onItemChosen: (item) =>
+        // Resolve pending seller target if needed
+        if (staged.chosenItem == null && staged.pendingSellerTarget != null)
+        {
+            staged.chosenItem = ResolveItemFromPendingSeller(staged.pendingSellerTarget);
+
+            if (staged.chosenItem == null)
             {
-                ApplyConservatorToItem(card, item);
-                CardUIManager.Instance.UpdateHUD();
-                //InventoryUI.Instance.RefreshInventoryDisplay();
-            },
-            onCancel: () => Debug.Log("[CardInteractionManager] Appraisal cancelled.")
-        );
+                Debug.LogWarning($"[CardInteractionManager] Conservator " +
+                                 $"'{staged.card.cardName}' could not resolve " +
+                                 $"pending seller item — skipping.");
+                return;
+            }
+        }
+
+        if (staged.chosenItem == null)
+        {
+            Debug.LogWarning($"[CardInteractionManager] Conservator '{staged.card.cardName}' " +
+                             $"executed with no chosen item — skipping.");
+            return;
+        }
+
+        ApplyConservatorToItem(staged.card, staged.chosenItem);
+        CardUIManager.Instance.UpdateHUD();
     }
+
     /// <summary>
     /// Applies conservator appraisal and optional restoration to an
     /// inventory item. If the conservator's expertise matches the item's

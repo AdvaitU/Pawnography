@@ -72,6 +72,7 @@ public class RoundManager : MonoBehaviour
     public UnityEvent onBossRoundStart;
     public UnityEvent onStagedSelectionsChanged;
     public UnityEvent onGameOver;
+    public UnityEvent<CardData> onDependentUnstaged;
 
     private void Awake()
     {
@@ -115,6 +116,25 @@ public class RoundManager : MonoBehaviour
             Debug.Log($"[RoundManager] Round {currentRound} started. " +
                       $"Drew {currentRoundCards.Count} cards.");
             onRoundStart?.Invoke();
+        }
+    }
+
+    /// <summary>
+    /// Returns the execution priority index for a card category.
+    /// Lower index executes first.
+    /// Order: Seller(0) → Conservator(1) → Buyer(2) → Contractor(3) → Freelancer(4)
+    /// </summary>
+    private int GetCategoryPriority(StagedCardData staged)
+    {
+        if (staged.card.category == null) return 99;
+        switch (staged.card.category.categoryName)
+        {
+            case "Seller": return 0;
+            case "Conservator": return 1;
+            case "Buyer": return 2;
+            case "Contractor": return 3;
+            case "Freelancer": return 4;
+            default: return 99;
         }
     }
 
@@ -170,10 +190,10 @@ public class RoundManager : MonoBehaviour
     // Called by CardUI on deselect
 
     /// <summary>
-    /// Removes a card from the staged list. Returns the removed
-    /// StagedCardData so the caller can clean up metadata
-    /// (e.g. free a chosen item back to the inventory display).
-    /// Returns null if the card was not staged.
+    /// Removes a card from the staged list. If the card is a Seller that was
+    /// targeted as a pending item by a Buyer or Conservator, those cards are
+    /// also automatically unstaged. Returns the removed StagedCardData so
+    /// CardUI can clean up visuals.
     /// </summary>
     public StagedCardData UnstageCard(CardData card)
     {
@@ -187,6 +207,20 @@ public class RoundManager : MonoBehaviour
         stagedCards.Remove(staged);
         Debug.Log($"[RoundManager] Unstaged '{card.cardName}'. " +
                   $"({stagedCards.Count}/{maxSelectionsPerRound})");
+
+        // Cascade — if this was a seller being targeted by another staged card,
+        // unstage the dependent card too
+        List<StagedCardData> dependents = stagedCards.FindAll(
+            s => s.pendingSellerTarget != null && s.pendingSellerTarget == staged);
+
+        foreach (StagedCardData dependent in dependents)
+        {
+            stagedCards.Remove(dependent);
+            Debug.Log($"[RoundManager] Auto-unstaged '{dependent.card.cardName}' " +
+                      $"— its pending seller target was removed.");
+            onDependentUnstaged?.Invoke(dependent.card);
+        }
+
         onStagedSelectionsChanged?.Invoke();
         return staged;
     }
@@ -208,26 +242,30 @@ public class RoundManager : MonoBehaviour
     // Executes all staged card effects then advances the round.
 
     /// <summary>
-    /// Executes all staged card effects via CardInteractionManager,
-    /// clears the staged list, fires onRoundEnd, then immediately
-    /// calls StartNewRound(). Called by CardUIManager when the
-    /// Next Round button is clicked.
+    /// Executes all staged card effects via CardInteractionManager in priority
+    /// order (Seller → Conservator → Buyer → Contractor → Freelancer),
+    /// clears the staged list, fires onRoundEnd, then calls StartNewRound().
+    /// Called by CardUIManager when the Next Round button is clicked.
     /// </summary>
     public void ProcessAndEndRound()
     {
         Debug.Log($"[RoundManager] Processing {stagedCards.Count} staged selection(s).");
 
-        List<StagedCardData> toProcess = new List<StagedCardData>(stagedCards);        // Make a list of all staged cards
+        // Clear temporary gold before execution — real gold checks take over from here
+        EconomyManager.Instance.ClearTemporaryGold();
+
+        List<StagedCardData> toProcess = new List<StagedCardData>(stagedCards);
+        toProcess.Sort((a, b) => GetCategoryPriority(a).CompareTo(GetCategoryPriority(b)));
 
         foreach (StagedCardData staged in toProcess)
-            CardInteractionManager.Instance.ExecuteCardEffect(staged);  // Call on CardInteractionManager to execute effects of all staged cards
+            CardInteractionManager.Instance.ExecuteCardEffect(staged);
 
-        stagedCards.Clear();          // Clear cache
-        onRoundEnd?.Invoke();         // Invoke OnRoundEnd event
+        stagedCards.Clear();
+        onRoundEnd?.Invoke();
         StartNewRound();
     }
 
-    
+
 
 
 }

@@ -24,9 +24,10 @@
  * ============================================================
  */
 
+using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 
 public class CardUI : MonoBehaviour
 {
@@ -52,6 +53,7 @@ public class CardUI : MonoBehaviour
 
     private void Awake()
     {
+        RoundManager.Instance.onDependentUnstaged.AddListener(OnDependentUnstaged);
         hoverHandler = GetComponentInChildren<CardHoverHandler>();
         cardButton.onClick.AddListener(OnCardClicked);
 
@@ -102,6 +104,32 @@ public class CardUI : MonoBehaviour
     }
 
     /// <summary>
+    /// Unstages all currently staged seller cards and clears their visuals.
+    /// Called when a buyer is unstaged and temporary gold is removed,
+    /// since sellers that were only affordable due to that temporary gold
+    /// can no longer be guaranteed affordable.
+    /// </summary>
+    private void UnstageAllSellers()
+    {
+        // Collect sellers to unstage — iterate activeCardUIs to find
+        // all staged seller CardUI instances
+        List<CardUI> sellerUIs = CardUIManager.Instance.activeCardUIs.FindAll(
+            c => c.isStaged &&
+                 c.assignedCard.category != null &&
+                 c.assignedCard.category.categoryName == "Seller");
+
+        foreach (CardUI sellerUI in sellerUIs)
+        {
+            RoundManager.Instance.UnstageCard(sellerUI.assignedCard);
+            sellerUI.SetSelectedVisual(false);
+            Debug.Log($"[CardUI] Auto-unstaged seller '{sellerUI.assignedCard.cardName}' " +
+                      $"— buyer was removed.");
+        }
+
+        CardUIManager.Instance.UpdateHUD();
+    }
+
+    /// <summary>
     /// Routes click by category. Checks affordability for all card types
     /// before any staging or popup. Shows floating text and blocks
     /// selection if the player cannot afford the card.
@@ -112,16 +140,31 @@ public class CardUI : MonoBehaviour
 
         if (isStaged)
         {
-            // ── DESELECT ──
             StagedCardData removed = RoundManager.Instance.UnstageCard(assignedCard);
 
-            if (removed != null && removed.chosenItem != null)
-                Debug.Log($"[CardUI] Freed chosen item '{removed.chosenItem.cardName}'.");
+            if (removed != null)
+            {
+                // If this was a buyer, remove its temporary gold contribution
+                // and unstage all staged sellers since affordability may have changed
+                if (assignedCard.category != null &&
+                    assignedCard.category.categoryName == "Buyer")
+                {
+                    int payout = GetBuyerExpectedPayout(removed);
+                    EconomyManager.Instance.RemoveTemporaryGold(payout);
+                    UnstageAllSellers();
+                }
+
+                if (removed.chosenItem != null)
+                    Debug.Log($"[CardUI] Freed chosen item '{removed.chosenItem.cardName}'.");
+            }
 
             SetSelectedVisual(false);
             CardUIManager.Instance.UpdateHUD();
             return;
         }
+
+
+
 
         // ── AFFORDABILITY CHECK ──
         // Run before any staging or popup for all card types that cost gold.
@@ -144,6 +187,10 @@ public class CardUI : MonoBehaviour
                 HandleBuyerClick();
                 break;
 
+            case "Conservator":
+                HandleConservatorClick();
+                break;
+
             default:
                 StagedCardData staged = RoundManager.Instance.StageCard(assignedCard);
                 if (staged != null)
@@ -153,6 +200,32 @@ public class CardUI : MonoBehaviour
                 }
                 break;
         }
+    }
+
+    /// <summary>
+    /// Called when this card is automatically unstaged because its pending
+    /// seller target was removed. Clears the staged visual.
+    /// </summary>
+    private void OnDependentUnstaged(CardData unstaged)
+    {
+        if (unstaged != assignedCard) return;
+        SetSelectedVisual(false);
+        CardUIManager.Instance.UpdateHUD();
+        Debug.Log($"[CardUI] '{assignedCard.cardName}' auto-deselected — " +
+                  $"pending seller target was removed.");
+    }
+
+    /// <summary>
+    /// Calculates the expected gold payout from a staged buyer based on
+    /// its chosen item. Used to add and remove temporary gold when the
+    /// buyer is staged or unstaged.
+    /// </summary>
+    private int GetBuyerExpectedPayout(StagedCardData staged)
+    {
+        if (staged.chosenItem == null) return 0;
+        if (staged.chosenItem.isAppraised) return staged.chosenItem.appraisedValue;
+        return staged.chosenItem.purchasePrice +
+               Mathf.RoundToInt(staged.chosenItem.purchasePrice * 0.2f);
     }
 
     /// <summary>
@@ -213,15 +286,26 @@ public class CardUI : MonoBehaviour
     /// </summary>
     private void HandleBuyerClick()
     {
+        List<StagedCardData> pendingSellers = RoundManager.Instance.stagedCards
+            .FindAll(s => s.card.category != null &&
+                          s.card.category.categoryName == "Seller");
+
         PopupManager.Instance.OpenBuyerItemSelection(
             assignedCard,
             InventoryManager.Instance.items,
-            onItemChosen: (item) =>
+            pendingSellers,
+            onItemChosen: (item, pendingSeller) =>
             {
                 StagedCardData staged = RoundManager.Instance.StageCard(assignedCard);
                 if (staged != null)
                 {
                     staged.chosenItem = item;
+                    staged.pendingSellerTarget = pendingSeller;
+
+                    // Add temporary gold so sellers can be afforded this round
+                    int payout = GetBuyerExpectedPayout(staged);
+                    EconomyManager.Instance.AddTemporaryGold(payout);
+
                     SetSelectedVisual(true);
                     CardUIManager.Instance.UpdateHUD();
                 }
@@ -230,7 +314,39 @@ public class CardUI : MonoBehaviour
             {
                 Debug.Log($"[CardUI] Buyer item selection cancelled.");
             }
+        );
+    }
 
+    /// <summary>
+    /// Opens a conservator item selection popup. Card stages only if an item is chosen.
+    /// Mirrors HandleBuyerClick() — choice is stored in staged.chosenItem and
+    /// executed at round end by CardInteractionManager.
+    /// </summary>
+    private void HandleConservatorClick()
+    {
+        List<StagedCardData> pendingSellers = RoundManager.Instance.stagedCards
+            .FindAll(s => s.card.category != null &&
+                          s.card.category.categoryName == "Seller");
+
+        PopupManager.Instance.OpenConservatorItemSelection(
+            assignedCard,
+            InventoryManager.Instance.items,
+            pendingSellers,
+            onItemChosen: (item, pendingSeller) =>
+            {
+                StagedCardData staged = RoundManager.Instance.StageCard(assignedCard);
+                if (staged != null)
+                {
+                    staged.chosenItem = item;
+                    staged.pendingSellerTarget = pendingSeller;
+                    SetSelectedVisual(true);
+                    CardUIManager.Instance.UpdateHUD();
+                }
+            },
+            onCancel: () =>
+            {
+                Debug.Log($"[CardUI] Conservator item selection cancelled.");
+            }
         );
     }
 

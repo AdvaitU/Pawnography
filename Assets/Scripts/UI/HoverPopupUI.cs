@@ -113,6 +113,7 @@ public class HoverPopupUI : MonoBehaviour
         switch (card.category.categoryName)
         {
             case "Seller":
+                hoverDescriptionText.text = $"Provenance: {card.provenance}\n{card.cardDescription}";
                 hoverCostText.gameObject.SetActive(true);
                 hoverValueText.gameObject.SetActive(true);
                 hoverCostText.text = $"Selling for {card.itemBuyCost}g";

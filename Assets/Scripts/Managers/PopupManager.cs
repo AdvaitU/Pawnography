@@ -140,10 +140,11 @@ public class PopupManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Adds a row button representing an inventory item.
-    /// Used in item selection lists for buyer and conservator popups.
+    /// Adds a row button representing an inventory item or pending seller.
+    /// Pass isClaimed = true to show the row greyed out and unclickable.
     /// </summary>
-    public void AddItemRow(InventoryItem item, Action<InventoryItem> onItemSelected)
+    public void AddItemRow(InventoryItem item, Action<InventoryItem> onItemSelected,
+                           bool isClaimed = false)
     {
         GameObject rowObj = Instantiate(itemRowPrefab, buttonContainer);
         TextMeshProUGUI rowText = rowObj.GetComponentInChildren<TextMeshProUGUI>();
@@ -151,12 +152,53 @@ public class PopupManager : MonoBehaviour
 
         if (rowText != null)
         {
-            // Show item name and appraisal status
             string valueStr = item.isAppraised ? $"{item.appraisedValue}g" : "???";
-            rowText.text = $"{item.cardName} - Value: {valueStr}, Paid: {item.purchasePrice}g";
+            rowText.text = $"{item.cardName}  |  Value: {valueStr}  |  Paid: {item.purchasePrice}g";
+
+            if (isClaimed)
+                rowText.color = new Color(0.5f, 0.5f, 0.5f, 1f);
         }
 
-        rowBtn.onClick.AddListener(() => onItemSelected(item));
+        if (rowBtn != null)
+        {
+            rowBtn.interactable = !isClaimed;
+            if (!isClaimed)
+                rowBtn.onClick.AddListener(() => onItemSelected(item));
+        }
+    }
+
+    /// <summary>
+    /// Adds a row button representing a pending seller card (not yet in inventory).
+    /// Shows a "Pending purchase" label. Pass isClaimed = true to grey it out.
+    /// </summary>
+    public void AddPendingSellerRow(StagedCardData pendingSeller,
+                                    Action<StagedCardData> onSellerSelected,
+                                    bool isClaimed = false)
+    {
+        GameObject rowObj = Instantiate(itemRowPrefab, buttonContainer);
+        TextMeshProUGUI rowText = rowObj.GetComponentInChildren<TextMeshProUGUI>();
+        Button rowBtn = rowObj.GetComponent<Button>();
+
+        if (rowText != null)
+        {
+            string valueStr = pendingSeller.card.valueIsHidden
+                ? "???"
+                : $"{pendingSeller.card.itemTrueValue}g";
+            rowText.text = $"{pendingSeller.card.cardName}  |  Value: {valueStr}  " +
+                           $"|  Cost: {pendingSeller.card.itemBuyCost}g  " +
+                           $"|  [Pending purchase]";
+
+            rowText.color = isClaimed
+                ? new Color(0.5f, 0.5f, 0.5f, 1f)
+                : new Color(0.9f, 0.7f, 0.2f, 1f); // gold tint for pending
+        }
+
+        if (rowBtn != null)
+        {
+            rowBtn.interactable = !isClaimed;
+            if (!isClaimed)
+                rowBtn.onClick.AddListener(() => onSellerSelected(pendingSeller));
+        }
     }
 
     // ─────────────────────────────────────────────
@@ -184,65 +226,107 @@ public class PopupManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Opens an item selection popup for a Buyer card.
-    /// Lists all inventory items. Player taps one to sell it to the buyer.
-    /// onItemChosen is called with the selected item.
-    /// onCancel is called if they back out.
+    /// Returns true if the given pending seller StagedCardData is already
+    /// targeted by another staged card that is not the current card.
+    /// Used to grey out claimed pending sellers in item selection popups.
+    /// </summary>
+    private bool IsClaimedByAnotherCard(StagedCardData pendingSeller, CardData currentCard)
+    {
+        foreach (StagedCardData staged in RoundManager.Instance.stagedCards)
+        {
+            if (staged.card == currentCard) continue;
+            if (staged.pendingSellerTarget == pendingSeller) return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Opens an item selection popup for a Buyer card. Lists all inventory
+    /// items and any pending seller cards staged this round. Pending sellers
+    /// already claimed by another card are shown greyed and unclickable.
+    /// onItemChosen passes the chosen InventoryItem and the StagedCardData
+    /// if a pending seller was chosen (null otherwise).
     /// </summary>
     public void OpenBuyerItemSelection(CardData buyerCard, List<InventoryItem> inventory,
-        Action<InventoryItem> onItemChosen, Action onCancel)
+        List<StagedCardData> pendingSellers,
+        Action<InventoryItem, StagedCardData> onItemChosen, Action onCancel)
     {
         OpenPopup(
             $"Sell to: {buyerCard.cardName}",
-            $"Looking for: {buyerCard.buyerDesiredItemType}\n" +
+            $"Looking for: {buyerCard.buyerDesiredItemType}\n\n" +
             $"Choose an item from your warehouse to sell:"
         );
 
-        if (inventory.Count == 0)
+        bool hasAnything = inventory.Count > 0 || pendingSellers.Count > 0;
+
+        if (!hasAnything)
         {
-            // No items to sell — just show a close button
-            bodyText.text += "\n\n(Your warehouse is empty.)";
+            bodyText.text += "\n\n(Your warehouse is empty and no items are pending purchase.)";
             AddButton("Close", () => { ClosePopup(); onCancel(); },
                 new Color(0.6f, 0.6f, 0.6f));
             return;
         }
 
+        // Existing inventory items
         foreach (InventoryItem item in inventory)
-            AddItemRow(item, (chosen) => { ClosePopup(); onItemChosen(chosen); });
+            AddItemRow(item, (chosen) => { ClosePopup(); onItemChosen(chosen, null); });
+
+        // Pending seller items
+        foreach (StagedCardData pending in pendingSellers)
+        {
+            bool isClaimed = IsClaimedByAnotherCard(pending, buyerCard);
+            AddPendingSellerRow(pending,
+                (chosen) => { ClosePopup(); onItemChosen(null, chosen); },
+                isClaimed);
+        }
 
         AddButton("Cancel", () => { ClosePopup(); onCancel(); },
             new Color(0.6f, 0.6f, 0.6f));
     }
 
     /// <summary>
-    /// Opens an item selection popup for a Conservator/Expert card.
-    /// Lists only unappraised items. Player taps one to have it appraised.
-    /// onItemChosen is called with the selected item.
-    /// onCancel is called if they back out.
+    /// Opens an item selection popup for a Conservator card. Lists unappraised
+    /// inventory items and any pending seller cards staged this round.
+    /// Pending sellers already claimed by another card are shown greyed
+    /// and unclickable.
+    /// onItemChosen passes the chosen InventoryItem and the StagedCardData
+    /// if a pending seller was chosen (null otherwise).
     /// </summary>
     public void OpenConservatorItemSelection(CardData conservatorCard,
-        List<InventoryItem> inventory, Action<InventoryItem> onItemChosen, Action onCancel)
+        List<InventoryItem> inventory, List<StagedCardData> pendingSellers,
+        Action<InventoryItem, StagedCardData> onItemChosen, Action onCancel)
     {
-        // Filter to only unappraised items
         List<InventoryItem> unappraisedItems = inventory.FindAll(i => !i.isAppraised);
-
 
         OpenPopup(
             $"Appraise with: {conservatorCard.cardName}",
-            $"Expertise: {conservatorCard.conservatorExpertise}\n" +
+            $"Expertise: {conservatorCard.conservatorExpertise}\n\n" +
             $"Choose an item to appraise:"
         );
 
-        if (unappraisedItems.Count == 0)
+        bool hasAnything = unappraisedItems.Count > 0 || pendingSellers.Count > 0;
+
+        if (!hasAnything)
         {
-            bodyText.text += "\n\n(No unappraised items in warehouse.)";
+            bodyText.text += "\n\n(No unappraised items in warehouse and " +
+                             "no items are pending purchase.)";
             AddButton("Close", () => { ClosePopup(); onCancel(); },
                 new Color(0.6f, 0.6f, 0.6f));
             return;
         }
 
+        // Unappraised inventory items
         foreach (InventoryItem item in unappraisedItems)
-            AddItemRow(item, (chosen) => { ClosePopup(); onItemChosen(chosen); });
+            AddItemRow(item, (chosen) => { ClosePopup(); onItemChosen(chosen, null); });
+
+        // Pending seller items
+        foreach (StagedCardData pending in pendingSellers)
+        {
+            bool isClaimed = IsClaimedByAnotherCard(pending, conservatorCard);
+            AddPendingSellerRow(pending,
+                (chosen) => { ClosePopup(); onItemChosen(null, chosen); },
+                isClaimed);
+        }
 
         AddButton("Cancel", () => { ClosePopup(); onCancel(); },
             new Color(0.6f, 0.6f, 0.6f));

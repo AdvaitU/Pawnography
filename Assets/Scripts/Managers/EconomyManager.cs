@@ -63,6 +63,10 @@ public class EconomyManager : MonoBehaviour
     [Header("Runtime State — view in Play Mode")]
     public int currentGold = 0;
 
+    [Tooltip("Temporary gold from pending buyer sales. Added to currentGold display " +
+         "only — not real gold until the buyer executes at round end.")]
+    public int temporaryGold = 0;
+
     [Tooltip("Total gold earned from sales this run. " +
              "Used to check boss round income threshold.")]
     public int totalIncomeThisRun = 0;
@@ -173,15 +177,59 @@ public class EconomyManager : MonoBehaviour
     }
 
     // CanAfford() -----------------------------------------------------
-    // Simple affordance check compares current gold to amount passed as parameter.
+    // Simple affordance check compares current gold (+ any temporary gold) to amount passed as parameter.
     /// <summary>
-    /// Returns true if the player currently has enough gold for the given amount.
+    /// Returns true if the player can afford the given amount using
+    /// both real gold and temporary gold from staged buyers.
     /// </summary>
     public bool CanAfford(int amount)
     {
-        return currentGold >= amount;
+        return EffectiveGold() >= amount;
     }
 
+    // Temporary Gold Methods -----------------------------------------------
+
+    /// <summary>
+    /// Adds temporary gold from a staged buyer's expected payout.
+    /// Does not change currentGold — only affects display and affordability checks.
+    /// Fires onGoldChanged so the HUD updates immediately.
+    /// </summary>
+    public void AddTemporaryGold(int amount)
+    {
+        temporaryGold += amount;
+        Debug.Log($"[EconomyManager] Temporary gold added: {amount}g. " +
+                  $"Total temporary: {temporaryGold}g.");
+        onGoldChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Removes temporary gold when a buyer is unstaged.
+    /// Clamps to 0 to avoid negative temporary gold.
+    /// Fires onGoldChanged so the HUD updates immediately.
+    /// </summary>
+    public void RemoveTemporaryGold(int amount)
+    {
+        temporaryGold = Mathf.Max(0, temporaryGold - amount);
+        Debug.Log($"[EconomyManager] Temporary gold removed: {amount}g. " +
+                  $"Total temporary: {temporaryGold}g.");
+        onGoldChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Clears all temporary gold. Called at round end after all
+    /// buyers have executed so no stale temporary values persist.
+    /// </summary>
+    public void ClearTemporaryGold()
+    {
+        temporaryGold = 0;
+        onGoldChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Returns the effective gold available for affordability checks —
+    /// real currentGold plus any temporary gold from staged buyers.
+    /// </summary>
+    public int EffectiveGold() => currentGold + temporaryGold;
 
     // Cost Calculators -----------------------------------------------------
     // Cost Calculators for Contractors and Freelancers that auto-calculate costs based on type when no cost is set

@@ -6727,6 +6727,9 @@ MonoBehaviour:
   onGameOver:
     m_PersistentCalls:
       m_Calls: []
+  onDependentUnstaged:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &1318746204
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6849,6 +6852,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   startingGold: 200
   currentGold: 0
+  temporaryGold: 0
   totalIncomeThisRun: 0
   incomeThisCycle: 0
   baseThreshold: 300
@@ -7158,7 +7162,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -373, y: 0}
+  m_AnchoredPosition: {x: -298.69, y: -0.000091553}
   m_SizeDelta: {x: 253.0435, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1412009708
@@ -10005,8 +10009,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 326, y: -40}
-  m_SizeDelta: {x: 200, y: 50}
+  m_AnchoredPosition: {x: 376.3944, y: -40}
+  m_SizeDelta: {x: 316.7888, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2022211000
 MonoBehaviour:
@@ -10413,7 +10417,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: -6, y: -0.000091553}
   m_SizeDelta: {x: 318.9899, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2047406604

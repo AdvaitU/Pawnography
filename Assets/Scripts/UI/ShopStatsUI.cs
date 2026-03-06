@@ -100,7 +100,15 @@ public class ShopStatsUI : MonoBehaviour
     private void RefreshHUDStats()
     {
         if (goldText != null)
-            goldText.text = $"💰 {EconomyManager.Instance.currentGold}g";
+        {
+            int real = EconomyManager.Instance.currentGold;
+            int temp = EconomyManager.Instance.temporaryGold;
+
+            if (temp > 0)
+                goldText.text = $"{real}g <color=#FFD700>+ {temp}g</color>";
+            else
+                goldText.text = $"{real}g";
+        }
 
         if (bossCountdownText != null)
         {
@@ -112,8 +120,8 @@ public class ShopStatsUI : MonoBehaviour
                 roundsUntilAuction = 0;
 
             bossCountdownText.text = roundsUntilAuction == 0
-                ? "🔨 AUCTION"
-                : $"🔨 Auction in {roundsUntilAuction}";
+                ? "AUCTION"
+                : $"Auction in {roundsUntilAuction}";
         }
     }
 

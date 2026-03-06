@@ -45,11 +45,7 @@ public class CardData : ScriptableObject
     [Tooltip("The top-level category this card belongs to.")]
     public CardCategory category;
 
-    [Tooltip("Sub-category label for Item based on CardSubCategory")]
-    public CardSubCategory subCategory;
 
-    [Tooltip("Descriptive tags that further contextualise this item for auction lot matching.")]
-    public List<string> tags = new List<string>();
 
     [Header("Spawning")]
     [Tooltip("Can be set false to lock card spawning, and true to unlock it")]
@@ -67,10 +63,22 @@ public class CardData : ScriptableObject
     // ── SELLER specific fields -------------------------------------------------------------------
     // Cards that offer items to buy in exchange for money instantly
     [Header("Seller/Item Card Fields")]
+
+    [Tooltip("The placee of origin or earliest known history of an item")]
+    public string provenance;
+
+    [Tooltip("Sub-category label for Item based on CardSubCategory")]
+    public CardSubCategory subCategory;
+
+    [Tooltip("Descriptive tags that further contextualise this item for auction lot matching.")]
+    public List<string> tags = new List<string>();
+
     [Tooltip("What it costs to buy the item when it is presented")]
     public int itemBuyCost = 0;
+
     [Tooltip("What is the true value of an item - can be higher or lower or the same as buy cost")]
     public int itemTrueValue = 0;
+
     [Tooltip("Should the value be hidden when the card is presented as a Seller card")]
     public bool valueIsHidden = true;
 
