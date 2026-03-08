@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ============================================================
  * SCRIPT:      CardDatabaseEditor.cs
  * GAMEOBJECT:  Editor only — not present in any scene or build.

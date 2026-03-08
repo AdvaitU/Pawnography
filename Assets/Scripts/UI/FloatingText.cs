@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ============================================================
  * SCRIPT:      FloatingText.cs
  * GAMEOBJECT:  Spawned at runtime as a child of MainCanvas

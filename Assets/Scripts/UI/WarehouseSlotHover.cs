@@ -35,7 +35,7 @@ public class WarehouseSlotHover : MonoBehaviour, IPointerEnterHandler, IPointerE
     public float hoverDelay = 0.5f;
 
     // The inventory item this slot is currently displaying.
-    // Null if the slot is empty — no popup shown for empty slots.
+    // Null if the slot is empty ï¿½ no popup shown for empty slots.
     private InventoryItem currentItem;
     private Coroutine hoverCoroutine;
 

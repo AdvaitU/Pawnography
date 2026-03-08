@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ============================================================
  * SCRIPT:      CardVisualController.cs
  * GAMEOBJECT:  CardVisual child object inside the Card Prefab

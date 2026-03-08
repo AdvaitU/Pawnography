@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ============================================================
  * SCRIPT:      WarehousePanelUI.cs
  * GAMEOBJECT:  UIManager

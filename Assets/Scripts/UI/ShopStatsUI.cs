@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ============================================================
  * SCRIPT:      ShopStatsUI.cs
  * GAMEOBJECT:  UIManager

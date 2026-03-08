@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ============================================================
  * SCRIPT:      PopupManager.cs
  * GAMEOBJECT:  UIManager

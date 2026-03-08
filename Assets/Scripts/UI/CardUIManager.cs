@@ -6,7 +6,7 @@
  * FUNCTION:
  *   Manages the card display area each round. Subscribes to
  *   RoundManager events to clear and respawn cards. Handles
- *   the Next Round button — which now calls
+ *   the Next Round button ï¿½ which now calls
  *   RoundManager.ProcessAndEndRound() to execute all staged
  *   selections before advancing. Updates the HUD to show
  *   how many cards are currently staged.
@@ -22,7 +22,7 @@
  * ------------------------------------------------------------
  * OPTIMISATION NOTES:
  *   Start() -- hooks button and subscribes to events.
- *   No Update(). Uses Instantiate/Destroy per round — consider
+ *   No Update(). Uses Instantiate/Destroy per round ï¿½ consider
  *   object pooling if card counts grow large.
  * ============================================================
  */
@@ -36,7 +36,7 @@ public class CardUIManager : MonoBehaviour
 {
     public static CardUIManager Instance { get; private set; }
 
-    [Header("References — assign in Inspector")]
+    [Header("References ï¿½ assign in Inspector")]
     public GameObject cardPrefab;
     public Transform cardRowParent;
     public TextMeshProUGUI roundText;

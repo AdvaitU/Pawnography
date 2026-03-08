@@ -20,7 +20,7 @@
  * METHODS CALLED BY OTHER SCRIPTS:   None (data container only)
  * ------------------------------------------------------------
  * OPTIMISATION NOTES:
- *   Plain C# class — no MonoBehaviour, no runtime methods.
+ *   Plain C# class ï¿½ no MonoBehaviour, no runtime methods.
  * ============================================================
  */
 
@@ -35,15 +35,15 @@ public class StagedCardData
 {
     public CardData card;
 
-    [Tooltip("For Buyer cards — the inventory item the player chose to sell.")]
+    [Tooltip("For Buyer cards ï¿½ the inventory item the player chose to sell.")]
     public InventoryItem chosenItem;
 
-    [Tooltip("For Conservator and Buyer cards — set when the player targets a " +
+    [Tooltip("For Conservator and Buyer cards ï¿½ set when the player targets a " +
          "pending seller card instead of an existing inventory item. " +
          "Resolved to an InventoryItem at execution time after the seller runs.")]
     public StagedCardData pendingSellerTarget;
 
-    [Tooltip("For Seller cards — true if the player confirmed the purchase via popup.")]
+    [Tooltip("For Seller cards ï¿½ true if the player confirmed the purchase via popup.")]
     public bool purchaseConfirmed;
 
     public StagedCardData(CardData card)

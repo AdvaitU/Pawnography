@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ============================================================
  * SCRIPT:      PopupShake.cs
  * GAMEOBJECT:  PopupPanel and HoverPopupPanel

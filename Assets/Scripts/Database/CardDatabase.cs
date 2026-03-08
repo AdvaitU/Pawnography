@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ============================================================
  * SCRIPT:      CardDatabase.cs
  * GAMEOBJECT:  GameManager

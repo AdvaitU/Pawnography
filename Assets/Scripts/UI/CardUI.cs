@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ============================================================
  * SCRIPT:      CardUI.cs
  * GAMEOBJECT:  Card Prefab root (spawned under CardRowPanel)

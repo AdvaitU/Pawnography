@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ============================================================
  * SCRIPT:      AuctionManager.cs
  * GAMEOBJECT:  GameManager

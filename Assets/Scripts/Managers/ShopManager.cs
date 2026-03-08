@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ============================================================
  * SCRIPT:      ShopManager.cs
  * GAMEOBJECT:  GameManager

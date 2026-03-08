@@ -10,7 +10,7 @@
  *   animates the card row down or up accordingly.
  *   Panels register themselves on Start via RegisterPanel().
  *   The order panels appear below the HUD matches the order
- *   they were opened — first opened sits closest to the HUD.
+ *   they were opened ï¿½ first opened sits closest to the HUD.
  * ------------------------------------------------------------
  * REFERENCED BY:
  *   ShopStatsUI         -- calls RegisterPanel() and
@@ -52,7 +52,7 @@ public class PanelStackManager : MonoBehaviour
     // Each entry: (panelGameObject, panelHeight, isOpen)
     private List<PanelEntry> panels = new List<PanelEntry>();
 
-    // The open order list — panels are added here when opened,
+    // The open order list ï¿½ panels are added here when opened,
     // removed when closed. Determines visual stacking order.
     private List<PanelEntry> openOrder = new List<PanelEntry>();
 

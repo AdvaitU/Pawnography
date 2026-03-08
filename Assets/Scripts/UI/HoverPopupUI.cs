@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ============================================================
  * SCRIPT:      HoverPopupUI.cs
  * GAMEOBJECT:  UIManager

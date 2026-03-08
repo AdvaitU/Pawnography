@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ============================================================
  * SCRIPT:      InventoryManager.cs
  * GAMEOBJECT:  GameManager

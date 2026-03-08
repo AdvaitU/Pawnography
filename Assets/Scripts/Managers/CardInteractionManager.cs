@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ============================================================
  * SCRIPT:      CardInteractionManager.cs
  * GAMEOBJECT:  GameManager

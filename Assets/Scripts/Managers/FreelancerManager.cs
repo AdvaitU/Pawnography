@@ -40,7 +40,7 @@ public class FreelancerManager : MonoBehaviour
 {
     public static FreelancerManager Instance { get; private set; }
 
-    [Header("Active Freelancers — view in Play Mode")]
+    [Header("Active Freelancers ï¿½ view in Play Mode")]
     public List<ActiveFreelancer> activeFreelancers = new List<ActiveFreelancer>();
 
     [Header("Events")]
@@ -92,7 +92,7 @@ public class FreelancerManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Resolves a returned freelancer — generates a random item value and
+    /// Resolves a returned freelancer ï¿½ generates a random item value and
     /// attempts to add it to the player's inventory.
     /// </summary>
     private void ResolveFreelancer(ActiveFreelancer freelancer)
@@ -116,7 +116,7 @@ public class FreelancerManager : MonoBehaviour
         bool added = InventoryManager.Instance.TryAddItem(foundItem);
 
         if (!added)
-            Debug.LogWarning($"[FreelancerManager] Could not add returned item — warehouse full.");
+            Debug.LogWarning($"[FreelancerManager] Could not add returned item ï¿½ warehouse full.");
 
         // Fire event so UI can notify the player
         onFreelancerReturned?.Invoke(freelancer);
@@ -126,7 +126,7 @@ public class FreelancerManager : MonoBehaviour
 /// <summary>
 /// Runtime data container for a freelancer that has been sent out.
 /// Tracks the return countdown and the item value when they return.
-/// Not a MonoBehaviour — lives only in memory during a run.
+/// Not a MonoBehaviour ï¿½ lives only in memory during a run.
 /// </summary>
 [System.Serializable]
 public class ActiveFreelancer

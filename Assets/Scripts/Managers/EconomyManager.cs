@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ============================================================
  * SCRIPT:      EconomyManager.cs
  * GAMEOBJECT:  GameManager

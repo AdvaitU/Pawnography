@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ============================================================
  * SCRIPT:      RoundManager.cs
  * GAMEOBJECT:  GameManager
