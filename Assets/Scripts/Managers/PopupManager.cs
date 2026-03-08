@@ -153,7 +153,7 @@ public class PopupManager : MonoBehaviour
         if (rowText != null)
         {
             string valueStr = item.isAppraised ? $"{item.appraisedValue}g" : "???";
-            rowText.text = $"{item.cardName}  |  Value: {valueStr}  |  Paid: {item.purchasePrice}g";
+            rowText.text = $"{item.cardName} - Value: {valueStr}, Paid: {item.purchasePrice}g";
 
             if (isClaimed)
                 rowText.color = new Color(0.5f, 0.5f, 0.5f, 1f);
@@ -184,9 +184,9 @@ public class PopupManager : MonoBehaviour
             string valueStr = pendingSeller.card.valueIsHidden
                 ? "???"
                 : $"{pendingSeller.card.itemTrueValue}g";
-            rowText.text = $"{pendingSeller.card.cardName}  |  Value: {valueStr}  " +
-                           $"|  Cost: {pendingSeller.card.itemBuyCost}g  " +
-                           $"|  [Pending purchase]";
+            rowText.text = $"{pendingSeller.card.cardName} - Value: {valueStr},  " +
+                           $"Cost: {pendingSeller.card.itemBuyCost}g  " +
+                           $" *";
 
             rowText.color = isClaimed
                 ? new Color(0.5f, 0.5f, 0.5f, 1f)

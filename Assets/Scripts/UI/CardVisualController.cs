@@ -152,8 +152,9 @@ public class CardVisualController : MonoBehaviour
 
         if (isStaged)
             targetY += selectedRaiseAmount;
-
+        
         currentYOffset = Mathf.Lerp(currentYOffset, targetY, Time.deltaTime * hoverRaiseSpeed);
+
     }
 
     private void UpdateHoverTilt()
@@ -204,7 +205,6 @@ public class CardVisualController : MonoBehaviour
 
     /// <summary>
     /// Applies all animation values to this object's local transform only.
-    /// Never touches the parent — no layout group conflict.
     /// </summary>
     private void ApplyTransforms()
     {

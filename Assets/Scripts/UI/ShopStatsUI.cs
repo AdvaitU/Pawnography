@@ -105,9 +105,11 @@ public class ShopStatsUI : MonoBehaviour
             int temp = EconomyManager.Instance.temporaryGold;
 
             if (temp > 0)
-                goldText.text = $"{real}g <color=#FFD700>+ {temp}g</color>";
+                goldText.text = $"💰 {real}g <color=#90EE90>+{temp}g</color>";
+            else if (temp < 0)
+                goldText.text = $"💰 {real}g <color=#FF6B6B>{temp}g</color>"; // temp is already negative so no minus needed
             else
-                goldText.text = $"{real}g";
+                goldText.text = $"💰 {real}g";
         }
 
         if (bossCountdownText != null)

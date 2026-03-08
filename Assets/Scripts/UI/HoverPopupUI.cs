@@ -29,9 +29,12 @@
  * ============================================================
  */
 
+using System;
+using System.Text.RegularExpressions;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
+using UnityEngine.Windows;
 
 public class HoverPopupUI : MonoBehaviour
 {
@@ -92,6 +95,15 @@ public class HoverPopupUI : MonoBehaviour
         // When ready, play hide animation here before deactivating.
     }
 
+    private string ToTitleCase(CardSubCategory subCat)
+    {
+        string subCategoryName = subCat.ToString();
+
+        if (string.IsNullOrEmpty(subCategoryName) || subCat == CardSubCategory.None) return "???";
+        string spaced = Regex.Replace(subCategoryName, "([a-z])([A-Z])", "$1 $2");                    // 1. Insert a space before each uppercase letter
+        return $"{char.ToUpper(spaced[0]) + spaced.Substring(1)}s";                                   // 2. Capitalize the first letter of the entire string
+    }
+
     /// <summary>
     /// Fills all popup text fields based on the card's category and data.
     /// </summary>
@@ -113,7 +125,8 @@ public class HoverPopupUI : MonoBehaviour
         switch (card.category.categoryName)
         {
             case "Seller":
-                hoverDescriptionText.text = $"Provenance: {card.provenance}\n{card.cardDescription}";
+                hoverDescriptionText.text = $"{ToTitleCase(card.subCategory)}, {card.provenance}\n" +
+                    $"{card.cardDescription}";
                 hoverCostText.gameObject.SetActive(true);
                 hoverValueText.gameObject.SetActive(true);
                 hoverCostText.text = $"Selling for {card.itemBuyCost}g";
@@ -140,7 +153,7 @@ public class HoverPopupUI : MonoBehaviour
             case "Buyer":
                 hoverCostText.gameObject.SetActive(true);
                 if (card.buyerDesiredItemType == CardSubCategory.None) hoverCostText.text = "Looking for anything that will catch their eye.";
-                else hoverCostText.text = $"Looking for {card.buyerDesiredItemType}";
+                else hoverCostText.text = $"Looking for {ToTitleCase(card.buyerDesiredItemType)}";
                 hoverCategoryBanner.color = Color.green;
                 break;
 
@@ -148,8 +161,8 @@ public class HoverPopupUI : MonoBehaviour
                 hoverCostText.gameObject.SetActive(true);
                 hoverExtraInfoText.gameObject.SetActive(true);
                 if(card.isConservator) hoverExtraInfoText.text = $"Can appraise and raise the right item's value by {card.conservatorUpgradePercentage}%";
-                else hoverExtraInfoText.text = "No chance of restoring and upgrading the value";
-                hoverCostText.text = $"Expertise: {card.conservatorExpertise}";
+                else hoverExtraInfoText.text = "Can identify the right item's value accurately.";
+                hoverCostText.text = $"Expertise: {ToTitleCase(card.conservatorExpertise)}";
                 hoverCategoryBanner.color = Color.magenta;
                 break;
 

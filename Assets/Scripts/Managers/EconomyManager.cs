@@ -187,6 +187,63 @@ public class EconomyManager : MonoBehaviour
         return EffectiveGold() >= amount;
     }
 
+    /// <summary>
+    /// Recalculates temporaryGold from scratch by iterating all currently
+    /// staged cards. Buyers contribute positive gold (expected payout),
+    /// Sellers/Contractors/Freelancers contribute negative gold (their cost).
+    /// Can produce a negative result if costs exceed expected income.
+    /// Fires onGoldChanged so the HUD updates immediately.
+    /// Called any time the staged card list changes.
+    /// </summary>
+    public void RecalculateTemporaryGold()
+    {
+        int net = 0;
+
+        foreach (StagedCardData staged in RoundManager.Instance.stagedCards)
+        {
+            CardData card = staged.card;
+            if (card.category == null) continue;
+
+            switch (card.category.categoryName)
+            {
+                case "Buyer":
+                    net += CalculateBuyerPayout(staged);
+                    break;
+
+                case "Seller":
+                    net -= card.itemBuyCost;
+                    break;
+
+                case "Contractor":
+                    net -= GetContractorCost(card);
+                    break;
+
+                case "Freelancer":
+                    net -= GetFreelancerCost(card);
+                    break;
+
+                    // ── Add new cases here ──
+            }
+        }
+
+        temporaryGold = net;
+        Debug.Log($"[EconomyManager] Temporary gold recalculated: {temporaryGold:+#;-#;0}g.");
+        onGoldChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Calculates the expected gold payout from a staged buyer based on
+    /// its chosen item. Returns 0 if no item has been chosen yet.
+    /// Mirrors the sell price logic in CardInteractionManager.ExecuteBuyer().
+    /// </summary>
+    private int CalculateBuyerPayout(StagedCardData staged)
+    {
+        if (staged.chosenItem == null) return 0;
+        if (staged.chosenItem.isAppraised) return staged.chosenItem.appraisedValue;
+        return staged.chosenItem.purchasePrice +
+               Mathf.RoundToInt(staged.chosenItem.purchasePrice * 0.2f);
+    }
+
     // Temporary Gold Methods -----------------------------------------------
 
     /// <summary>

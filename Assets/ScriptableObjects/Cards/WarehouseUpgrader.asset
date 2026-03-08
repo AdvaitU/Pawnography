@@ -16,21 +16,30 @@ MonoBehaviour:
   cardDescription: Upgrades the warehouse by 1 to contain more items.
   cardArt: {fileID: 0}
   category: {fileID: 11400000, guid: 6afdfb0db0498464c86d9c1b628000a8, type: 2}
-  subCategory: 
   canSpawn: 1
   spawnWeight: 10
   timesSpawnedThisRun: 0
+  provenance: 
+  subCategory: 0
+  tags: []
   itemBuyCost: 0
   itemTrueValue: 0
   valueIsHidden: 1
-  buyerDesiredItemType: 
-  buyerOfferedPrice: 0
-  appraisalAccuracy: 1
+  itemCondition: 50
+  buyerDesiredItemType: 0
+  buyerProfitPercentage: 0.2
+  isConservator: 0
+  conservatorExpertise: 0
+  conservatorUpgradePercentage: 10
+  nonExpertiseMultiplier: 0.7
   upgradeType: 1
   upgradeAmount: 1
+  staffIdentifiesItemType: 0
   categoryToUnlock: {fileID: 0}
-  subCategoryToUnlock: 
-  staffIdentifiesItemType: 
+  subCategoryToUnlock: 0
+  fixedCost: 1
+  contractorCost: 50
   roundsToReturn: 3
   freelancerMinItemValue: 0
   freelancerMaxItemValue: 0
+  freelancerCost: 0

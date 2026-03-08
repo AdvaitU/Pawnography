@@ -306,37 +306,51 @@ public class AuctionManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Calculates 'e' — 0.2f per matching subCategory pair across the lot.
-    /// Uses combinatorial pair counting: for n items sharing a subCategory,
-    /// adds n*(n-1)/2 pairs * 0.2f.
+    /// Calculates 'e' — per matching subCategory pair across the lot.
+    /// For each pair sharing a subCategory: adds 0.4f if Provenance also matches,
+    /// 0.2f if Provenance does not match or is unset.
+    /// Uses explicit pair iteration (i, j) to allow per-pair Provenance comparison.
     /// Items with subCategory == None are excluded.
     /// </summary>
     private float CalculateSubCategoryBonus(List<InventoryItem> lot) // STAGE 2, STEP 1 --------------------------------
     {
-        // Count how many items belong to each subCategory
-        Dictionary<CardSubCategory, int> categoryCounts =
-            new Dictionary<CardSubCategory, int>();               // Create a dictionary for quick lookup of subCategory counts
-
-        // For each lot item, check its subCategory and increment the count for that subCategory in the dictionary
+        // Filter out items with no subCategory before iterating pairs
+        // Safeguard against null sourceCard references at the same time
+        List<InventoryItem> eligibleItems = new List<InventoryItem>();
         foreach (InventoryItem item in lot)
         {
-            if (item.sourceCard == null) continue;   // Safeguard against null reference
+            if (item.sourceCard == null) continue;                              // Safeguard against null reference
             if (item.sourceCard.subCategory == CardSubCategory.None) continue;  // Same as above
-
-            CardSubCategory sub = item.sourceCard.subCategory;
-            if (!categoryCounts.ContainsKey(sub))     // If that key doesn't exist yet in the dictionary, add it with a starting count of 0
-                categoryCounts[sub] = 0;
-            categoryCounts[sub]++;              // Increment the count for that subCategory
+            eligibleItems.Add(item);
         }
 
-        // For each group of n items sharing a subCategory.
-        // Number of pairs = n * (n - 1) / 2  (n squared minus n, divided by 2)
         float e = 0f;
-        // For each subCategory count in the dictionary
-        foreach (int count in categoryCounts.Values)
+
+        // Explicit pair iteration — compare every unique pair (i, j) where i < j
+        // to avoid counting the same pair twice e.g. (0,1) and (1,0)
+        for (int i = 0; i < eligibleItems.Count; i++)
         {
-            int pairs = count * (count - 1) / 2;   // Calculate the number of pairs using the combinatorial formula
-            e += pairs * 0.2f;                     // FOr each pair, add 0.2f to 'e'
+            for (int j = i + 1; j < eligibleItems.Count; j++)
+            {
+                InventoryItem itemA = eligibleItems[i];
+                InventoryItem itemB = eligibleItems[j];
+
+                // Only proceed if subCategories match
+                if (itemA.sourceCard.subCategory != itemB.sourceCard.subCategory) continue;
+
+                // Check if Provenance also matches — both must be non-empty to qualify
+                string provA = itemA.sourceCard.provenance;
+                string provB = itemB.sourceCard.provenance;
+
+                bool provenanceMatches = !string.IsNullOrWhiteSpace(provA) &&
+                                         !string.IsNullOrWhiteSpace(provB) &&
+                                         provA.Trim().ToLower() == provB.Trim().ToLower();
+
+                if (provenanceMatches)
+                    e += 0.4f;  // SubCategory AND Provenance match
+                else
+                    e += 0.2f;  // SubCategory match only
+            }
         }
 
         return e;

@@ -25,6 +25,7 @@
  */
 
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -61,6 +62,15 @@ public class CardUI : MonoBehaviour
             selectedOverlay.SetActive(false);
     }
 
+    private string ToTitleCase(CardSubCategory subCat)
+    {
+        string subCategoryName = subCat.ToString();
+
+        if (string.IsNullOrEmpty(subCategoryName) || subCat == CardSubCategory.None) return "???";
+        string spaced = Regex.Replace(subCategoryName, "([a-z])([A-Z])", "$1 $2");                    // 1. Insert a space before each uppercase letter
+        return $"{char.ToUpper(spaced[0]) + spaced.Substring(1)}s";                                   // 2. Capitalize the first letter of the entire string
+    }
+
     /// <summary>
     /// Populates the card face. Called by CardUIManager each round.
     /// </summary>
@@ -91,9 +101,9 @@ public class CardUI : MonoBehaviour
 
         switch (card.category.categoryName)
         {
-            case "Seller": return $"{card.itemBuyCost}g";
-            case "Buyer": return $"Wants: {card.buyerDesiredItemType}";
-            case "Conservator": return $"Expert: {card.conservatorExpertise}";
+            case "Seller": return $"Selling for {card.itemBuyCost}g";
+            case "Buyer": return $"Looking for {ToTitleCase(card.buyerDesiredItemType)}";
+            case "Conservator": return $"Expert in {ToTitleCase(card.conservatorExpertise)}";
             case "Contractor":
             case "Freelancer":
                 return card.cardDescription.Length > 40
@@ -140,24 +150,8 @@ public class CardUI : MonoBehaviour
 
         if (isStaged)
         {
-            StagedCardData removed = RoundManager.Instance.UnstageCard(assignedCard);
-
-            if (removed != null)
-            {
-                // If this was a buyer, remove its temporary gold contribution
-                // and unstage all staged sellers since affordability may have changed
-                if (assignedCard.category != null &&
-                    assignedCard.category.categoryName == "Buyer")
-                {
-                    int payout = GetBuyerExpectedPayout(removed);
-                    EconomyManager.Instance.RemoveTemporaryGold(payout);
-                    UnstageAllSellers();
-                }
-
-                if (removed.chosenItem != null)
-                    Debug.Log($"[CardUI] Freed chosen item '{removed.chosenItem.cardName}'.");
-            }
-
+            RoundManager.Instance.UnstageCard(assignedCard);
+            EconomyManager.Instance.RecalculateTemporaryGold();
             SetSelectedVisual(false);
             CardUIManager.Instance.UpdateHUD();
             return;
@@ -189,6 +183,14 @@ public class CardUI : MonoBehaviour
 
             case "Conservator":
                 HandleConservatorClick();
+                break;
+
+            case "Contractor":
+                HandleContractorClick();
+                break;
+
+            case "Freelancer":
+                HandleFreelancerClick();
                 break;
 
             default:
@@ -276,6 +278,7 @@ public class CardUI : MonoBehaviour
         if (staged != null)
         {
             staged.purchaseConfirmed = true;
+            EconomyManager.Instance.RecalculateTemporaryGold();
             SetSelectedVisual(true);
             CardUIManager.Instance.UpdateHUD();
         }
@@ -287,8 +290,7 @@ public class CardUI : MonoBehaviour
     private void HandleBuyerClick()
     {
         List<StagedCardData> pendingSellers = RoundManager.Instance.stagedCards
-            .FindAll(s => s.card.category != null &&
-                          s.card.category.categoryName == "Seller");
+            .FindAll(s => s.card.category?.categoryName == "Seller");
 
         PopupManager.Instance.OpenBuyerItemSelection(
             assignedCard,
@@ -301,19 +303,12 @@ public class CardUI : MonoBehaviour
                 {
                     staged.chosenItem = item;
                     staged.pendingSellerTarget = pendingSeller;
-
-                    // Add temporary gold so sellers can be afforded this round
-                    int payout = GetBuyerExpectedPayout(staged);
-                    EconomyManager.Instance.AddTemporaryGold(payout);
-
+                    EconomyManager.Instance.RecalculateTemporaryGold();
                     SetSelectedVisual(true);
                     CardUIManager.Instance.UpdateHUD();
                 }
             },
-            onCancel: () =>
-            {
-                Debug.Log($"[CardUI] Buyer item selection cancelled.");
-            }
+            onCancel: () => Debug.Log("[CardUI] Buyer item selection cancelled.")
         );
     }
 
@@ -348,6 +343,36 @@ public class CardUI : MonoBehaviour
                 Debug.Log($"[CardUI] Conservator item selection cancelled.");
             }
         );
+    }
+
+    /// <summary>
+    /// Stages a contractor card and deducts its cost from temporary gold display.
+    /// Affordability already checked before this is called.
+    /// </summary>
+    private void HandleContractorClick()
+    {
+        StagedCardData staged = RoundManager.Instance.StageCard(assignedCard);
+        if (staged != null)
+        {
+            EconomyManager.Instance.RecalculateTemporaryGold();
+            SetSelectedVisual(true);
+            CardUIManager.Instance.UpdateHUD();
+        }
+    }
+
+    /// <summary>
+    /// Stages a freelancer card and deducts its cost from temporary gold display.
+    /// Affordability already checked before this is called.
+    /// </summary>
+    private void HandleFreelancerClick()
+    {
+        StagedCardData staged = RoundManager.Instance.StageCard(assignedCard);
+        if (staged != null)
+        {
+            EconomyManager.Instance.RecalculateTemporaryGold();
+            SetSelectedVisual(true);
+            CardUIManager.Instance.UpdateHUD();
+        }
     }
 
     public void SetSelectedVisual(bool selected)
