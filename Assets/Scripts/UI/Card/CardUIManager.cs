@@ -6,43 +6,39 @@
  * FUNCTION:
  *   Manages the card display area each round. Subscribes to
  *   RoundManager events to clear and respawn cards. Handles
- *   the Next Round button � which now calls
+ *   the Next Round button, which calls
  *   RoundManager.ProcessAndEndRound() to execute all staged
- *   selections before advancing. Updates the HUD to show
- *   how many cards are currently staged.
+ *   selections before advancing.
+ *
+ *   Round number, gold, and selections text have moved into
+ *   ShopPanel (owned by ShopStatsUI). UpdateHUD() delegates
+ *   all stat display to ShopStatsUI.RefreshAllStats().
  * ------------------------------------------------------------
  * REFERENCED BY:
  *   CardInteractionManager -- calls UpdateHUD() after card
- *                          interaction popups complete
+ *                             interactions complete
  * ------------------------------------------------------------
  * METHODS CALLED BY OTHER SCRIPTS:
- *   UpdateHUD()         --> Called by CardUI.OnCardClicked()
- *                          and CardInteractionManager after
- *                          any interaction
+ *   UpdateHUD()  --> CardUI.OnCardClicked() and
+ *                    CardInteractionManager after interactions
  * ------------------------------------------------------------
  * OPTIMISATION NOTES:
- *   Start() -- hooks button and subscribes to events.
- *   No Update(). Uses Instantiate/Destroy per round � consider
- *   object pooling if card counts grow large.
+ *   No Update(). Uses Instantiate/Destroy per round.
  * ============================================================
  */
 
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 
 public class CardUIManager : MonoBehaviour
 {
     public static CardUIManager Instance { get; private set; }
 
-    [Header("References � assign in Inspector")]
+    [Header("References — assign in Inspector")]
     public GameObject cardPrefab;
     public Transform cardRowParent;
-    public TextMeshProUGUI roundText;
-    public TextMeshProUGUI selectionsText;
     public Button nextRoundButton;
-    [Tooltip("HUD text showing current gold balance.")]
 
     [Header("Runtime State")]
     public List<CardUI> activeCardUIs = new List<CardUI>();
@@ -66,8 +62,7 @@ public class CardUIManager : MonoBehaviour
 
     private void OnRoundStart()
     {
-        // Auction rounds are handled entirely by AuctionManager and AuctionUI.
-        if (RoundManager.Instance.isBossRound) return;  // Don't fire the rest of the events if it is an Auction round
+        if (RoundManager.Instance.isBossRound) return;
 
         ClearCards();
         SpawnCards();
@@ -100,34 +95,20 @@ public class CardUIManager : MonoBehaviour
             }
         }
 
-        // Force the layout group to immediately calculate positions
-        // so CardVisualController can cache correct rest positions
         UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(
-            cardRowParent.GetComponent<RectTransform>()
-        );
+            cardRowParent.GetComponent<RectTransform>());
     }
 
     /// <summary>
-    /// Updates the round number and staged selection count in the HUD.
+    /// Delegates all stat display to ShopStatsUI, which now owns
+    /// the round, gold, and selections text fields inside ShopPanel.
     /// </summary>
     public void UpdateHUD()
     {
-        if (roundText != null)
-            roundText.text = $"Round: {RoundManager.Instance.currentRound}";
-
-        if (selectionsText != null)
-            selectionsText.text = $"Selected: {RoundManager.Instance.stagedCards.Count}" +
-                                  $" / {RoundManager.Instance.maxSelectionsPerRound}";
-
-        // Keep ShopStatsUI in sync whenever the HUD updates
         if (ShopStatsUI.Instance != null)
             ShopStatsUI.Instance.RefreshAllStats();
     }
 
-    /// <summary>
-    /// Called when the Next Round button is clicked.
-    /// Triggers processing of all staged card selections before advancing.
-    /// </summary>
     private void OnNextRoundClicked()
     {
         RoundManager.Instance.ProcessAndEndRound();

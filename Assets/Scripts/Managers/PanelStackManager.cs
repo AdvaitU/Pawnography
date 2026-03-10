@@ -4,29 +4,37 @@
  * GAMEOBJECT:  UIManager
  * ------------------------------------------------------------
  * FUNCTION:
- *   Tracks all collapsible panels below the HUD and their
- *   open/closed state. When any panel opens or closes, it
- *   recalculates the total vertical offset needed and smoothly
- *   animates the card row down or up accordingly.
- *   Panels register themselves on Start via RegisterPanel().
- *   The order panels appear below the HUD matches the order
- *   they were opened � first opened sits closest to the HUD.
+ *   Manages root panels that slide in from the top of the
+ *   canvas, and the card row displacement they cause.
+ *   All panels and the card row share a single slideSpeed.
+ *
+ *   Currently one root panel is registered: "Warehouse".
+ *   ShopPanel is NOT registered here — it is a hierarchy
+ *   child of WarehousePanel and moves with it for free.
+ *
+ *   SetPanelOpen() accepts an optional topOffset parameter.
+ *   When ShopStatsUI opens the Warehouse to bring both panels
+ *   on screen, it passes topOffset = shopPanelHeight so the
+ *   Warehouse slides down far enough that the Shop (sitting
+ *   above it as a child) lands flush at the canvas top edge.
+ *   Card row displacement also includes topOffset.
+ *
+ *   Panel position convention (top-stretch anchor, pivot top):
+ *     Closed: anchoredPosition.y = +panelHeight
+ *             Panel body above canvas; Warehouse button
+ *             (child anchored to panel bottom) peeks below
+ *             the canvas top edge.
+ *     Open:   anchoredPosition.y = -(hudHeight + topOffset)
+ *             Panel hangs down from the canvas top.
+ *
  * ------------------------------------------------------------
  * REFERENCED BY:
- *   ShopStatsUI         -- calls RegisterPanel() and
- *                          SetPanelOpen() on toggle
- *   WarehousePanelUI    -- calls RegisterPanel() and
- *                          SetPanelOpen() on toggle
- * ------------------------------------------------------------
- * METHODS CALLED BY OTHER SCRIPTS:
- *   RegisterPanel()     --> Called by each panel UI script
- *                          on Start to join the stack
- *   SetPanelOpen()      --> Called by each panel UI script
- *                          when toggled open or closed
+ *   WarehousePanelUI   -- RegisterPanel(), SetPanelOpen()
+ *   ShopStatsUI        -- SetPanelOpen() with topOffset
  * ------------------------------------------------------------
  * OPTIMISATION NOTES:
- *   Update() -- runs only while isAnimating is true.
- *   Stops itself once the card row reaches its target.
+ *   Update() runs only while isAnimating is true.
+ *   Stops itself once all targets are within 0.5 px.
  * ============================================================
  */
 
@@ -37,37 +45,38 @@ public class PanelStackManager : MonoBehaviour
 {
     public static PanelStackManager Instance { get; private set; }
 
+    // ── Inspector ────────────────────────────────────────────
+
     [Header("Card Row")]
     [Tooltip("The RectTransform of the card row that slides down " +
              "when panels are opened.")]
     public RectTransform cardRowRect;
 
-    [Tooltip("Height of the HUD bar in pixels. Panels stack below this offset.")]
-    public float hudHeight = 80f;
+    [Tooltip("Height of any fixed HUD bar above the panels. " +
+             "Set to 0 when panels slide from the very top of the canvas.")]
+    public float hudHeight = 0f;
 
-    [Tooltip("Speed of the card row slide animation.")]
+    [Tooltip("Lerp speed shared by all panel animations and the card row.")]
     public float slideSpeed = 8f;
 
-    // Registered panels in the order they were registered
-    // Each entry: (panelGameObject, panelHeight, isOpen)
+    // ── Data ─────────────────────────────────────────────────
+
+    private class PanelEntry
+    {
+        public string panelId;
+        public RectTransform rt;
+        public float panelHeight;
+        public bool isOpen;
+        public float topOffset;    // Extra downward push when open (e.g. shopPanelHeight)
+        public float targetY;
+    }
+
     private List<PanelEntry> panels = new List<PanelEntry>();
-
-    // The open order list � panels are added here when opened,
-    // removed when closed. Determines visual stacking order.
-    private List<PanelEntry> openOrder = new List<PanelEntry>();
-
     private float cardRowBaseY = 0f;
     private float cardRowTargetY = 0f;
     private bool isAnimating = false;
 
-    [System.Serializable]
-    public class PanelEntry
-    {
-        public GameObject panelObject;
-        public float panelHeight;
-        public bool isOpen;
-        public string panelId;
-    }
+    // ── Lifecycle ────────────────────────────────────────────
 
     private void Awake()
     {
@@ -79,50 +88,90 @@ public class PanelStackManager : MonoBehaviour
     {
         if (cardRowRect != null)
             cardRowBaseY = cardRowRect.anchoredPosition.y;
+
+        // Snap any panels that registered before this Start() ran.
+        // Panels registered after this point are snapped inside RegisterPanel().
+        SnapAllToClosed();
     }
 
     private void Update()
     {
         if (!isAnimating) return;
 
-        float current = cardRowRect.anchoredPosition.y;
-        float next = Mathf.Lerp(current, cardRowTargetY, Time.deltaTime * slideSpeed);
-        cardRowRect.anchoredPosition = new Vector2(cardRowRect.anchoredPosition.x, next);
+        bool stillMoving = false;
 
-        if (Mathf.Abs(next - cardRowTargetY) < 0.5f)
+        foreach (PanelEntry entry in panels)
         {
-            cardRowRect.anchoredPosition = new Vector2(
-                cardRowRect.anchoredPosition.x, cardRowTargetY);
-            isAnimating = false;
+            if (entry.rt == null) continue;
+
+            float current = entry.rt.anchoredPosition.y;
+            float next = Mathf.Lerp(current, entry.targetY, Time.deltaTime * slideSpeed);
+
+            entry.rt.anchoredPosition = new Vector2(entry.rt.anchoredPosition.x, next);
+
+            if (Mathf.Abs(next - entry.targetY) > 0.5f)
+                stillMoving = true;
+            else
+                entry.rt.anchoredPosition =
+                    new Vector2(entry.rt.anchoredPosition.x, entry.targetY);
         }
+
+        // Card row
+        float cardCurrent = cardRowRect.anchoredPosition.y;
+        float cardNext = Mathf.Lerp(cardCurrent, cardRowTargetY, Time.deltaTime * slideSpeed);
+
+        cardRowRect.anchoredPosition = new Vector2(cardRowRect.anchoredPosition.x, cardNext);
+
+        if (Mathf.Abs(cardNext - cardRowTargetY) > 0.5f)
+            stillMoving = true;
+        else
+            cardRowRect.anchoredPosition =
+                new Vector2(cardRowRect.anchoredPosition.x, cardRowTargetY);
+
+        isAnimating = stillMoving;
     }
 
+    // ── Public API ───────────────────────────────────────────
+
     /// <summary>
-    /// Called by each panel UI script on Start to register itself
-    /// with the stack manager.
+    /// Registers a root panel. Snaps it to its closed position
+    /// (anchoredPosition.y = panelHeight) immediately.
     /// </summary>
     public void RegisterPanel(string panelId, GameObject panelObject, float panelHeight)
     {
-        // Avoid duplicate registration
         if (panels.Exists(p => p.panelId == panelId)) return;
 
-        panels.Add(new PanelEntry
+        RectTransform rt = panelObject.GetComponent<RectTransform>();
+
+        PanelEntry entry = new PanelEntry
         {
             panelId = panelId,
-            panelObject = panelObject,
+            rt = rt,
             panelHeight = panelHeight,
-            isOpen = false
-        });
+            isOpen = false,
+            topOffset = 0f,
+            targetY = panelHeight
+        };
 
-        Debug.Log($"[PanelStackManager] Registered panel '{panelId}' " +
-                  $"(height: {panelHeight}px).");
+        panels.Add(entry);
+
+        if (rt != null)
+            rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, panelHeight);
+
+        Debug.Log($"[PanelStackManager] Registered '{panelId}' " +
+                  $"(height: {panelHeight}px). Closed at Y: {panelHeight}.");
     }
 
     /// <summary>
-    /// Called by a panel UI script when it is toggled open or closed.
-    /// Repositions all open panels and recalculates card row offset.
+    /// Opens or closes a registered panel.
+    ///
+    /// topOffset (optional) pushes the open Y target further down by that
+    /// many pixels and is included in the card row displacement.
+    /// Pass topOffset = shopPanelHeight when opening Warehouse to also
+    /// bring the Shop (child) into view at the canvas top edge.
+    /// Pass topOffset = 0 (default) for a plain Warehouse-only open.
     /// </summary>
-    public void SetPanelOpen(string panelId, bool open)
+    public void SetPanelOpen(string panelId, bool open, float topOffset = 0f)
     {
         PanelEntry entry = panels.Find(p => p.panelId == panelId);
         if (entry == null)
@@ -132,47 +181,47 @@ public class PanelStackManager : MonoBehaviour
         }
 
         entry.isOpen = open;
+        entry.topOffset = open ? topOffset : 0f;
 
-        if (open && !openOrder.Contains(entry))
-            openOrder.Add(entry);
-        else if (!open)
-            openOrder.Remove(entry);
-
-        RepositionPanels();
-        RecalculateCardRowTarget();
-    }
-
-    /// <summary>
-    /// Repositions all open panels in the order they were opened,
-    /// stacking them directly below the HUD bar.
-    /// Panels are anchored top-stretch so negative Pos Y pushes them down.
-    /// </summary>
-    private void RepositionPanels()
-    {
-        // Start stacking immediately below the HUD bar
-        float currentY = -hudHeight;
-
-        foreach (PanelEntry entry in openOrder)
-        {
-            RectTransform rt = entry.panelObject.GetComponent<RectTransform>();
-            if (rt == null) continue;
-
-            rt.anchoredPosition = new Vector2(0f, currentY);
-            currentY -= entry.panelHeight;
-        }
-    }
-
-    /// <summary>
-    /// Recalculates and applies the card row Y target based on
-    /// the total height of all open panels.
-    /// </summary>
-    private void RecalculateCardRowTarget()
-    {
-        float totalOffset = 0f;
-        foreach (PanelEntry entry in openOrder)
-            totalOffset += entry.panelHeight;
-
-        cardRowTargetY = cardRowBaseY - totalOffset;
+        RecalculateTargets();
         isAnimating = true;
+    }
+
+    // ── Private helpers ──────────────────────────────────────
+
+    /// <summary>
+    /// Recalculates Y targets for all panels and the card row.
+    ///   Closed → targetY = +panelHeight  (above canvas)
+    ///   Open   → targetY = -(hudHeight + topOffset)
+    /// Card row displacement = sum of (panelHeight + topOffset) for open panels.
+    /// </summary>
+    private void RecalculateTargets()
+    {
+        float cardDisplacement = 0f;
+
+        foreach (PanelEntry entry in panels)
+        {
+            if (!entry.isOpen)
+            {
+                entry.targetY = entry.panelHeight;
+                continue;
+            }
+
+            entry.targetY = -(hudHeight + entry.topOffset);
+            cardDisplacement += entry.panelHeight + entry.topOffset;
+        }
+
+        cardRowTargetY = cardRowBaseY - cardDisplacement;
+    }
+
+    private void SnapAllToClosed()
+    {
+        foreach (PanelEntry entry in panels)
+        {
+            if (entry.rt == null) continue;
+            entry.targetY = entry.panelHeight;
+            entry.rt.anchoredPosition =
+                new Vector2(entry.rt.anchoredPosition.x, entry.panelHeight);
+        }
     }
 }
