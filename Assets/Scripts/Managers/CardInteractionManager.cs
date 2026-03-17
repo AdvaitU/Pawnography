@@ -100,9 +100,29 @@ public class CardInteractionManager : MonoBehaviour
             return;
         }
 
-        EconomyManager.Instance.TrySpendGold(card.itemBuyCost, $"Buy {card.cardName}");        // Calls the Economy Manager to do gold spending
-        InventoryManager.Instance.TryAddItem(card);                                            // Adds the item to the Inventory Manager
-        CardUIManager.Instance.UpdateHUD();                                                    // Updates CardUI Manager to update the HUD - remove gold
+        // Speaking to other scripts ----
+        EconomyManager.Instance.TrySpendGold(card.itemBuyCost, $"Buy {card.cardName}");  // Spend gold
+        InventoryManager.Instance.TryAddItem(card);                                      // Add item to Inventory
+
+        // Auto Appraiser Check -----------
+        // If an active AutoAppraiser marked this card this round, apply full appraisal to the item that was just added to inventory.
+        if (FreelancerManager.Instance.IsAppraisedByFreelancer(card))
+        {
+            InventoryItem addedItem = InventoryManager.Instance.items.Find(
+                i => i.sourceCard == card);
+
+            if (addedItem != null)
+            {
+                addedItem.isAppraised = true;
+                addedItem.appraisedValue = card.itemTrueValue;
+                addedItem.valueIsRevealed = true;
+                Debug.Log($"[CardInteractionManager] AutoAppraiser applied to " +
+                          $"'{card.cardName}' on inventory entry — " +
+                          $"appraised at {card.itemTrueValue}g.");
+            }
+        }
+
+        CardUIManager.Instance.UpdateHUD();   // Force call to reveal value if Auto Appraiser is applied
         Debug.Log($"[CardInteractionManager] Bought '{card.cardName}' for {card.itemBuyCost}g.");
     }
 
@@ -269,6 +289,16 @@ public class CardInteractionManager : MonoBehaviour
     /// </summary>
     private void ExecuteFreelancer(CardData card)
     {
+        if (card.freelancerType == FreelancerType.LoanShark)
+        {
+            // Loan sharks give gold upfront — no hire cost, no affordability check
+            EconomyManager.Instance.AddGold(card.loanAmount,
+                $"Loan from {card.cardName}");
+            FreelancerManager.Instance.SendOutFreelancer(card);
+            CardUIManager.Instance.UpdateHUD();
+            return;
+        }
+
         int cost = EconomyManager.Instance.GetFreelancerCost(card);
 
         if (!EconomyManager.Instance.CanAfford(cost))
@@ -281,6 +311,5 @@ public class CardInteractionManager : MonoBehaviour
         EconomyManager.Instance.TrySpendGold(cost, $"Send {card.cardName}");
         FreelancerManager.Instance.SendOutFreelancer(card);
         CardUIManager.Instance.UpdateHUD();
-        
     }
 }

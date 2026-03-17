@@ -10,20 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ab2ab7d367e4af345bb77b98e447490a, type: 3}
-  m_Name: GraveDigger
+  m_Name: MrsStrombabolous
   m_EditorClassIdentifier: 
-  cardName: Grave Digger
-  cardDescription: He hangs out near cemetries. He seems to know all the fixers and
-    fences. Now imagine you are the fence and he needs 3 days of hanging out to get
-    results.
+  cardName: Mrs. Strombabolous
+  cardDescription: The self styled voice of this generation, Mrs. Strombabolous excels
+    at spotting notable collector's items from the late 50s all the way to the modern
+    day. And now her services can be yours!
   cardArt: {fileID: 0}
-  category: {fileID: 11400000, guid: eba10a138cf705f48b01322f46910f0f, type: 2}
+  category: {fileID: 11400000, guid: 1eada894644346540aa64f05522a8b03, type: 2}
+  subCategory: 0
   canSpawn: 1
   spawnWeight: 10
-  timesSpawnedThisRun: 0
-  provenance: 
-  subCategory: 0
-  tags: []
+  timesSpawnedThisRun: 2
   itemBuyCost: 0
   itemTrueValue: 0
   valueIsHidden: 1
@@ -31,7 +29,7 @@ MonoBehaviour:
   buyerDesiredItemType: 0
   buyerProfitPercentage: 0.2
   isConservator: 0
-  conservatorExpertise: 0
+  conservatorExpertise: 2
   conservatorUpgradePercentage: 10
   nonExpertiseMultiplier: 0.7
   upgradeType: 0
@@ -41,9 +39,7 @@ MonoBehaviour:
   subCategoryToUnlock: 0
   fixedCost: 0
   contractorCost: 0
-  freelancerType: 1
-  freelancerMeasure: 0
   roundsToReturn: 3
-  freelancerMinItemValue: 100
-  freelancerMaxItemValue: 300
-  freelancerCost: 100
+  freelancerMinItemValue: 0
+  freelancerMaxItemValue: 0
+  freelancerCost: 0

@@ -265,10 +265,8 @@ public class ShopStatsUI : MonoBehaviour
         }
 
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        sb.AppendLine("Freelancers:");
-        //foreach (ActiveFreelancer f in active)
-        //    sb.AppendLine($"  • {f.cardName} — {f.roundsRemaining} round(s)");
-
+        foreach (ActiveFreelancer f in active)
+            sb.Append($" | {f.cardName} - {f.roundsRemaining} round(s) ");
         freelancersText.text = sb.ToString().TrimEnd();
     }
 

@@ -20,7 +20,7 @@ MonoBehaviour:
   category: {fileID: 11400000, guid: ec7337ca8c6220c408d85e9608d8c5af, type: 2}
   canSpawn: 1
   spawnWeight: 10
-  timesSpawnedThisRun: 1
+  timesSpawnedThisRun: 0
   provenance: New York (1981)
   subCategory: 2
   tags:
@@ -46,6 +46,9 @@ MonoBehaviour:
   subCategoryToUnlock: 0
   fixedCost: 0
   contractorCost: 0
+  freelancerType: 0
+  freelancerMeasure: 0
+  loanAmount: 0
   roundsToReturn: 3
   freelancerMinItemValue: 0
   freelancerMaxItemValue: 0

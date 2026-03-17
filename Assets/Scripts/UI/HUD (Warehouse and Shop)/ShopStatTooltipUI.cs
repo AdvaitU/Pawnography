@@ -30,9 +30,10 @@
  * ============================================================
  */
 
+using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 
 public class ShopStatTooltipUI : MonoBehaviour
 {
@@ -123,4 +124,10 @@ public class ShopStatTooltipUI : MonoBehaviour
 
         tooltipRT.anchoredPosition = anchoredPos;
     }
+
+    //List<ActiveFreelancer> active = FreelancerManager.Instance.activeFreelancers;
+    //System.Text.StringBuilder sb = new System.Text.StringBuilder();
+    //sb.AppendLine($"{active.Count}");
+    //foreach (ActiveFreelancer f in active)
+    //sb.AppendLine($"  • {f.cardName} — {f.roundsRemaining} round(s)");
 }

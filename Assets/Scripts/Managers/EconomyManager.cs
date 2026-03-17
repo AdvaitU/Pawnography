@@ -219,7 +219,10 @@ public class EconomyManager : MonoBehaviour
                     break;
 
                 case "Freelancer":
-                    net -= GetFreelancerCost(card);
+                    if (card.freelancerType == FreelancerType.LoanShark)
+                        net += card.loanAmount;  // Loan adds gold on execution
+                    else
+                        net -= GetFreelancerCost(card);
                     break;
 
                     // ── Add new cases here ──
@@ -332,6 +335,10 @@ public class EconomyManager : MonoBehaviour
     /// </summary>
     public int GetFreelancerCost(CardData card)
     {
+        // Loan sharks give gold rather than cost it — always free to select
+        if (card.freelancerType == FreelancerType.LoanShark)
+            return 0;
+
         if (card.fixedCost)
             return card.freelancerCost;
 

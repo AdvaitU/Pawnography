@@ -97,6 +97,10 @@ public class CardUIManager : MonoBehaviour
 
         UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(
             cardRowParent.GetComponent<RectTransform>());
+
+        // Notify FreelancerManager so AutoAppraiser can reveal values
+        // on matching cards now that activeCardUIs is fully populated.
+        FreelancerManager.Instance.NotifyCardsSpawned();
     }
 
     /// <summary>

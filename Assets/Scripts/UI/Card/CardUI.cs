@@ -62,15 +62,6 @@ public class CardUI : MonoBehaviour
             selectedOverlay.SetActive(false);
     }
 
-    private string ToTitleCase(CardSubCategory subCat)
-    {
-        string subCategoryName = subCat.ToString();
-
-        if (string.IsNullOrEmpty(subCategoryName) || subCat == CardSubCategory.None) return "???";
-        string spaced = Regex.Replace(subCategoryName, "([a-z])([A-Z])", "$1 $2");                    // 1. Insert a space before each uppercase letter
-        return $"{char.ToUpper(spaced[0]) + spaced.Substring(1)}s";                                   // 2. Capitalize the first letter of the entire string
-    }
-
     /// <summary>
     /// Populates the card face. Called by CardUIManager each round.
     /// </summary>
@@ -95,6 +86,21 @@ public class CardUI : MonoBehaviour
             hoverHandler.SetCardData(card);
     }
 
+    private string GetFreelancerInfo(CardData card)
+    {
+        switch (card.freelancerType)
+        {
+            case FreelancerType.None: return "???";
+            case FreelancerType.FetchItem: return $"Fetches a random item under {card.freelancerMaxItemValue} in value";
+            case FreelancerType.AutoAppraiser: return $"Can auto-appraise all {ExtensionMethods.ToTitleCase(card.conservatorExpertise)}";
+            case FreelancerType.LoanShark: return $"Loans {card.loanAmount}g for {card.roundsToReturn} days";
+            case FreelancerType.TempFloorSpaceBonus: return $"Temporarily upgrades Floor space by {card.freelancerMeasure}";
+            case FreelancerType.TempWarehouseBonus: return $"Temporarily upgrades Warehouse space by {card.freelancerMeasure}";
+            case FreelancerType.TempReputationBonus: return $"Temporarily upgrades Shop reputation by {card.freelancerMeasure}";
+            default: return "???";
+        }
+    }
+
     private string GetQuickInfo(CardData card)
     {
         if (card.category == null) return string.Empty;
@@ -102,13 +108,10 @@ public class CardUI : MonoBehaviour
         switch (card.category.categoryName)
         {
             case "Seller": return $"Selling for {card.itemBuyCost}g";
-            case "Buyer": return $"Looking for {ToTitleCase(card.buyerDesiredItemType)}";
-            case "Conservator": return $"Expert in {ToTitleCase(card.conservatorExpertise)}";
-            case "Contractor":
-            case "Freelancer":
-                return card.cardDescription.Length > 40
-                    ? card.cardDescription.Substring(0, 40) + "..."
-                    : card.cardDescription;
+            case "Buyer": return $"Looking for {ExtensionMethods.ToTitleCase(card.buyerDesiredItemType)}";
+            case "Conservator": return $"Expert in {ExtensionMethods.ToTitleCase(card.conservatorExpertise)}";
+            case "Contractor": return $"{card.cardDescription}";
+            case "Freelancer": return GetFreelancerInfo(card);
             default: return string.Empty;
         }
     }
@@ -373,6 +376,27 @@ public class CardUI : MonoBehaviour
             SetSelectedVisual(true);
             CardUIManager.Instance.UpdateHUD();
         }
+    }
+
+    /// <summary>
+    /// Called directly by FreelancerManager when an active AutoAppraiser
+    /// marks this card at round start. Overrides the value display to show
+    /// itemTrueValue instead of "???".
+    /// Only applies to Seller cards — other categories are ignored.
+    /// </summary>
+    public void RevealAppraisedValue()
+    {
+        if (assignedCard == null) return;
+        if (assignedCard.category == null) return;
+        if (assignedCard.category.categoryName != "Seller") return;
+
+        // Update the quick info line to show the true value
+        if (cardQuickInfoText != null)
+            cardQuickInfoText.text = $"Selling for {assignedCard.itemBuyCost}g " +
+                                     $"(Value: {assignedCard.itemTrueValue}g ✓)";
+
+        Debug.Log($"[CardUI] '{assignedCard.cardName}' value revealed " +
+                  $"by AutoAppraiser: {assignedCard.itemTrueValue}g.");
     }
 
     public void SetSelectedVisual(bool selected)

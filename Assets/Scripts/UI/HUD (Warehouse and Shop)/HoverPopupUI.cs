@@ -95,13 +95,68 @@ public class HoverPopupUI : MonoBehaviour
         // When ready, play hide animation here before deactivating.
     }
 
-    private string ToTitleCase(CardSubCategory subCat)
+    /// <summary>
+    /// Gets the necessary info for the freelancer based on switch case statement for Freelancer type
+    /// </summary>
+    /// <param name="card"></param>
+    /// <returns></returns>
+    private void GetFreelancerInfo2(CardData card, string costText, string extraInfoText, string valueText)
     {
-        string subCategoryName = subCat.ToString();
+        switch (card.freelancerType)
+        {
+            case FreelancerType.None: 
+                costText = string.Empty;
+                extraInfoText = string.Empty;
+                valueText = string.Empty;
+                break;
+            case FreelancerType.FetchItem:
+                costText = $"Cost: {card.freelancerCost}g";
+                extraInfoText = $"Tenure: {card.roundsToReturn} days";
+                valueText = $"Function: Fetch a random item with value equal to or under {card.freelancerMaxItemValue}g when it returns. Item will automatically be added to the warehouse.";
+                break;
+            case FreelancerType.AutoAppraiser:
+                costText = $"Cost: {card.freelancerCost}g";
+                extraInfoText = $"Tenure: {card.roundsToReturn} days";
+                valueText = $"Function: Auto-appraise all {ExtensionMethods.ToTitleCase(card.conservatorExpertise)} that customers come in to sell during their tenure.";
+                break;
+            case FreelancerType.LoanShark:
+                costText = $"Cost: None";
+                extraInfoText = $"Tenure: {card.roundsToReturn} days";
+                valueText = $"Function: Loans {card.loanAmount}g that needs to be repaid (without interest). Failure to do so might cost the shop its reputation.";
+                break;
+            case FreelancerType.TempFloorSpaceBonus:
+                costText = $"Cost: {card.freelancerCost}g";
+                extraInfoText = $"Tenure: {card.roundsToReturn} days";
+                valueText = $"Function: Temporarily upgrade the Shop's Floor Space by {card.freelancerMeasure} to allow more customers each day.";
+                break;
+            case FreelancerType.TempWarehouseBonus:
+                costText = $"Cost: {card.freelancerCost}g";
+                extraInfoText = $"Tenure: {card.roundsToReturn} days";
+                valueText = $"Function: Temporarily upgrade the Warehouse Space by {card.freelancerMeasure}. Any items left in the temporary storage at the end of the tenure will disappear.";
+                break;
+            case FreelancerType.TempReputationBonus:
+                costText = $"Cost: {card.freelancerCost}g";
+                extraInfoText = $"Tenure: {card.roundsToReturn} days";
+                valueText = $"Function: Temporarily boost the shop's reputation by {card.freelancerMeasure}.";
+                break;
+            default:
+                break;
+        }
+    }
 
-        if (string.IsNullOrEmpty(subCategoryName) || subCat == CardSubCategory.None) return "???";
-        string spaced = Regex.Replace(subCategoryName, "([a-z])([A-Z])", "$1 $2");                    // 1. Insert a space before each uppercase letter
-        return $"{char.ToUpper(spaced[0]) + spaced.Substring(1)}s";                                   // 2. Capitalize the first letter of the entire string
+    private string GetFreelancerInfo(CardData card)
+    {
+        switch (card.freelancerType)
+        {
+            case FreelancerType.None: return string.Empty;
+            case FreelancerType.FetchItem: return $"Function: Fetch a random item with value under {card.freelancerMaxItemValue + 1}.";
+            case FreelancerType.AutoAppraiser: return $"Function: Auto-appraise all {ExtensionMethods.ToTitleCase(card.conservatorExpertise)} on the floor";
+            case FreelancerType.LoanShark: return $"Function: Loans {card.loanAmount}g without interest. Failure to repay in full costs the shop reputation.";
+            case FreelancerType.TempFloorSpaceBonus: return $"Function: Temporarily upgrade the Shop's Floor Space by {card.freelancerMeasure}";
+            case FreelancerType.TempWarehouseBonus: return $"Function: Temporarily upgrade the Warehouse Space by {card.freelancerMeasure}.";
+            case FreelancerType.TempReputationBonus: return$"Function: Temporarily boost the shop's reputation by {card.freelancerMeasure}.";
+            default: return "???";
+        }
     }
 
     /// <summary>
@@ -125,7 +180,7 @@ public class HoverPopupUI : MonoBehaviour
         switch (card.category.categoryName)
         {
             case "Seller":
-                hoverDescriptionText.text = $"{ToTitleCase(card.subCategory)}, {card.provenance}\n" +
+                hoverDescriptionText.text = $"{ExtensionMethods.ToTitleCase(card.subCategory)}, {card.provenance}\n" +
                     $"{card.cardDescription}";
                 hoverCostText.gameObject.SetActive(true);
                 hoverValueText.gameObject.SetActive(true);
@@ -153,7 +208,7 @@ public class HoverPopupUI : MonoBehaviour
             case "Buyer":
                 hoverCostText.gameObject.SetActive(true);
                 if (card.buyerDesiredItemType == CardSubCategory.None) hoverCostText.text = "Looking for anything that will catch their eye.";
-                else hoverCostText.text = $"Looking for {ToTitleCase(card.buyerDesiredItemType)}";
+                else hoverCostText.text = $"Looking for {ExtensionMethods.ToTitleCase(card.buyerDesiredItemType)}";
                 hoverCategoryBanner.color = Color.green;
                 break;
 
@@ -162,7 +217,7 @@ public class HoverPopupUI : MonoBehaviour
                 hoverExtraInfoText.gameObject.SetActive(true);
                 if(card.isConservator) hoverExtraInfoText.text = $"Can appraise and raise the right item's value by {card.conservatorUpgradePercentage}%";
                 else hoverExtraInfoText.text = "Can identify the right item's value accurately.";
-                hoverCostText.text = $"Expertise: {ToTitleCase(card.conservatorExpertise)}";
+                hoverCostText.text = $"Expertise: {ExtensionMethods.ToTitleCase(card.conservatorExpertise)}";
                 hoverCategoryBanner.color = Color.magenta;
                 break;
 
@@ -183,8 +238,10 @@ public class HoverPopupUI : MonoBehaviour
             case "Freelancer":
                 hoverCostText.gameObject.SetActive(true);
                 hoverExtraInfoText.gameObject.SetActive(true);
-                hoverCostText.text = $"Returns in: {card.roundsToReturn} rounds with an item of value between {card.freelancerMinItemValue}g and {card.freelancerMaxItemValue}g";
-                hoverExtraInfoText.text = $"This service will cost you {EconomyManager.Instance.GetFreelancerCost(card)}g";
+                hoverValueText.gameObject.SetActive(true);
+                hoverCostText.text = $"Cost: {card.freelancerCost}g";
+                hoverExtraInfoText.text = $"Tenure: {card.roundsToReturn} days";
+                hoverValueText.text = GetFreelancerInfo(card);
                 hoverCategoryBanner.color = Color.black;
                 break;
 

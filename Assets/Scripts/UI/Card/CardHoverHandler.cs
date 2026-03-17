@@ -91,6 +91,14 @@ public class CardHoverHandler : MonoBehaviour, IPointerEnterHandler, IPointerExi
         yield return new WaitForSeconds(hoverDelay);
 
         if (cardData != null)
-            HoverPopupUI.Instance.ShowPopup(cardData, GetComponent<RectTransform>());
+        {
+            bool revealValue = FreelancerManager.Instance != null &&
+                               FreelancerManager.Instance.IsAppraisedByFreelancer(cardData);
+
+            HoverPopupUI.Instance.ShowPopup(
+                cardData,
+                GetComponent<RectTransform>(),
+                revealValue: revealValue);
+        }
     }
 }

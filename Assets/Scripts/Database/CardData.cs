@@ -140,8 +140,28 @@ public class CardData : ScriptableObject
     // ── FREELANCER fields -------------------------------------------------------------------
     // Cards that can be hired to perform an action over n turns
     [Header("Freelancer Fields")]
+
+    [Tooltip("Defines what this freelancer does. The enum value implies " +
+             "whether the effect fires once on expiry or each round while active.")]
+    public FreelancerType freelancerType = FreelancerType.None;
+
+    [Tooltip("General-purpose measure used by the freelancer effect. " +
+             "FetchItem: unused. LoanShark: gold owed / reputation lost on default. " +
+             "AutoAppraiser: unused. TempStatBonus types: bonus amount applied.")]
+    public int freelancerMeasure = 0;
+
+    [Tooltip("LoanShark only — gold added to the player's balance when the card " +
+         "is executed. The same amount is owed back after roundsToReturn rounds.")]
+    public int loanAmount = 0;
+
+    [Tooltip("How many rounds until this freelancer expires / returns.")]
     public int roundsToReturn = 3;
-    public int freelancerMinItemValue = 0;          // Fields used to randomise item returned by FreelancerManager
+
+    //[Tooltip("FetchItem only — minimum value of the item brought back.")]
+    public int freelancerMinItemValue = 0;                                    // Deprecated - No longer needed
+
+    [Tooltip("FetchItem only — only items with itemTrueValue at or below this " +
+             "value are eligible to be fetched. Acts as a quality ceiling.")]
     public int freelancerMaxItemValue = 0;
 
     [Tooltip("Use to override and set fixed cost. If 0, cost is auto-calculated " +

@@ -54,6 +54,11 @@ public class CardDatabase : MonoBehaviour
         "Objects not here will be ignored by the game")]
     public List<CardData> allCards = new List<CardData>();
 
+    [Tooltip("CardData assets eligible to be fetched by FetchItem freelancers. " +
+             "Populate manually. Freelancers filter this list by their " +
+             "freelancerMaxItemValue at resolution time.")]
+    public List<CardData> fetchedItems = new List<CardData>();
+
     // ── Cached lookup: category → cards that belong to it ──
     private Dictionary<CardCategory, List<CardData>> cardsByCategory;  // Used in BuildLookup() - Dictionary with CardCategory as keys and Lists of CardData objects by category as the values to optimise the sorting in the later methods.
 

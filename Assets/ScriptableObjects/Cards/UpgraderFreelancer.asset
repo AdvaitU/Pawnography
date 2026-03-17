@@ -10,12 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ab2ab7d367e4af345bb77b98e447490a, type: 3}
-  m_Name: GraveDigger
+  m_Name: UpgraderFreelancer
   m_EditorClassIdentifier: 
-  cardName: Grave Digger
-  cardDescription: He hangs out near cemetries. He seems to know all the fixers and
-    fences. Now imagine you are the fence and he needs 3 days of hanging out to get
-    results.
+  cardName: Upgrader Freelancer
+  cardDescription: Placeholder that uipgrades Shop Stats temporarily
   cardArt: {fileID: 0}
   category: {fileID: 11400000, guid: eba10a138cf705f48b01322f46910f0f, type: 2}
   canSpawn: 1
@@ -41,9 +39,9 @@ MonoBehaviour:
   subCategoryToUnlock: 0
   fixedCost: 0
   contractorCost: 0
-  freelancerType: 1
-  freelancerMeasure: 0
+  freelancerType: 4
+  freelancerMeasure: 1
   roundsToReturn: 3
-  freelancerMinItemValue: 100
-  freelancerMaxItemValue: 300
-  freelancerCost: 100
+  freelancerMinItemValue: 0
+  freelancerMaxItemValue: 0
+  freelancerCost: 0

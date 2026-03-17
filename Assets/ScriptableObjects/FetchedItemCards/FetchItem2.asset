@@ -10,26 +10,26 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ab2ab7d367e4af345bb77b98e447490a, type: 3}
-  m_Name: Pop Culture Expert
+  m_Name: FetchItem2
   m_EditorClassIdentifier: 
-  cardName: Mrs. Strombabolous
-  cardDescription: The self styled voice of this generation, Mrs. Strombabolous excels
-    at spotting notable collector's items from the late 50s all the way to the modern
-    day. And now her services can be yours!
+  cardName: Dead Person's Necklace
+  cardDescription: Placeholder item that Fetch Item type Freelancer returns
   cardArt: {fileID: 0}
-  category: {fileID: 11400000, guid: 1eada894644346540aa64f05522a8b03, type: 2}
-  subCategory: 0
-  canSpawn: 1
+  category: {fileID: 11400000, guid: ec7337ca8c6220c408d85e9608d8c5af, type: 2}
+  canSpawn: 0
   spawnWeight: 10
-  timesSpawnedThisRun: 2
-  itemBuyCost: 0
-  itemTrueValue: 0
-  valueIsHidden: 1
+  timesSpawnedThisRun: 0
+  provenance: 
+  subCategory: 3
+  tags: []
+  itemBuyCost: 200
+  itemTrueValue: 200
+  valueIsHidden: 0
   itemCondition: 50
   buyerDesiredItemType: 0
   buyerProfitPercentage: 0.2
   isConservator: 0
-  conservatorExpertise: 2
+  conservatorExpertise: 0
   conservatorUpgradePercentage: 10
   nonExpertiseMultiplier: 0.7
   upgradeType: 0
@@ -39,6 +39,8 @@ MonoBehaviour:
   subCategoryToUnlock: 0
   fixedCost: 0
   contractorCost: 0
+  freelancerType: 0
+  freelancerMeasure: 0
   roundsToReturn: 3
   freelancerMinItemValue: 0
   freelancerMaxItemValue: 0
