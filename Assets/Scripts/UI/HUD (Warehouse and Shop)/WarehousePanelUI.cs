@@ -106,7 +106,7 @@ public class WarehousePanelUI : MonoBehaviour
     public void NotifyOpen()
     {
         isPanelOpen = true;
-        warehouseButtonLabel.text = "Warehouse ▲";
+        warehouseButtonLabel.text = "Warehouse";
         RefreshWarehouse();
     }
 
@@ -117,7 +117,7 @@ public class WarehousePanelUI : MonoBehaviour
     public void NotifyClose()
     {
         isPanelOpen = false;
-        warehouseButtonLabel.text = "Warehouse ▼";
+        warehouseButtonLabel.text = "Warehouse";
     }
 
     // ── Toggle ───────────────────────────────────────────────
@@ -204,6 +204,8 @@ public class WarehousePanelUI : MonoBehaviour
 
         if (hoverHandler != null)
             hoverHandler.SetItemData(item);
+
+        slot.PlayEntryAnimation(item != null);
 
         if (slot == null)
         {

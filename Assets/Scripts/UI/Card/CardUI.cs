@@ -39,6 +39,7 @@ public class CardUI : MonoBehaviour
     public GameObject selectedOverlay;
     public Button cardButton;
 
+
     [Header("Category Colours")]
     public Color sellerColour = new Color(0.2f, 0.6f, 0.9f);
     public Color buyerColour = new Color(0.9f, 0.6f, 0.2f);
@@ -58,8 +59,6 @@ public class CardUI : MonoBehaviour
         hoverHandler = GetComponentInChildren<CardHoverHandler>();
         cardButton.onClick.AddListener(OnCardClicked);
 
-        if (selectedOverlay != null)
-            selectedOverlay.SetActive(false);
     }
 
     /// <summary>
@@ -69,9 +68,6 @@ public class CardUI : MonoBehaviour
     {
         assignedCard = card;
         isStaged = false;
-
-        if (selectedOverlay != null)
-            selectedOverlay.SetActive(false);
 
         if (cardArtImage != null)
         {
@@ -403,11 +399,11 @@ public class CardUI : MonoBehaviour
     {
         isStaged = selected;
 
-        if (selectedOverlay != null)
-            selectedOverlay.SetActive(selected);
-
         CardVisualController visualController = GetComponentInChildren<CardVisualController>();
         if (visualController != null)
+        {
             visualController.SetStaged(selected);
+            visualController.SetOverlayVisible(selected);
+        }
     }
 }

@@ -56,6 +56,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using DG.Tweening;
 
 public class ShopStatsUI : MonoBehaviour
 {
@@ -86,6 +87,24 @@ public class ShopStatsUI : MonoBehaviour
     [Tooltip("Current gold and temporary gold breakdown.")]
     public TextMeshProUGUI goldText;
 
+    [Header("Gold Animation")]
+    [Tooltip("Scale punch amount when gold changes.")]
+    public float goldPunchScale = 0.25f;
+
+    [Tooltip("Duration of the gold text punch.")]
+    public float goldPunchDuration = 0.3f;
+    public Ease goldPunchEase = Ease.OutElastic;
+
+    [Tooltip("Colour flashed when gold increases.")]
+    public Color goldGainColour = new Color(0.4f, 1f, 0.4f, 1f);
+
+    [Tooltip("Colour flashed when gold decreases.")]
+    public Color goldLossColour = new Color(1f, 0.35f, 0.35f, 1f);
+
+    [Tooltip("Duration of the colour flash back to white.")]
+    public float goldColourFlashDuration = 0.4f;
+    public Ease goldColourFlashEase = Ease.OutQuad;
+
     [Tooltip("Current round number.")]
     public TextMeshProUGUI roundText;
 
@@ -99,6 +118,16 @@ public class ShopStatsUI : MonoBehaviour
     public Image[] selections = new Image[2];
     public Color disabledColor = Color.white;
     public Color enabledColor = Color.white;
+
+    [Header("Selection Circle Animation")]
+    [Tooltip("Duration of the colour transition between enabled and disabled states.")]
+    public float selectionColourDuration = 0.2f;
+    public Ease selectionColourEase = Ease.OutQuad;
+
+    [Tooltip("Scale punch when a selection slot becomes filled.")]
+    public float selectionPunchScale = 0.3f;
+    public float selectionPunchDuration = 0.25f;
+    public Ease selectionPunchEase = Ease.OutBack;
 
     // ── Stats: secondary ─────────────────────────────────────
 
@@ -118,6 +147,8 @@ public class ShopStatsUI : MonoBehaviour
     // ── Internal state ───────────────────────────────────────
 
     private bool isOpen = false;
+
+    private int lastKnownGold = 0;
     public bool IsOpen => isOpen;
 
     private const string WAREHOUSE_ID = "Warehouse";
@@ -213,6 +244,25 @@ public class ShopStatsUI : MonoBehaviour
                 goldText.text = $"{real}g <color=#FF6B6B>{temp}g</color>";
             else
                 goldText.text = $"{real}g";
+
+            // Punch and colour flash on gold change
+            if (real != lastKnownGold)
+            {
+                bool gained = real > lastKnownGold;
+                lastKnownGold = real;
+
+                RectTransform rt = goldText.GetComponent<RectTransform>();
+                rt.DOKill();
+                rt.DOPunchScale(Vector3.one * goldPunchScale, goldPunchDuration,
+                                vibrato: 1, elasticity: 0.5f)
+                  .SetEase(goldPunchEase);
+
+                Color flashColour = gained ? goldGainColour : goldLossColour;
+                goldText.DOKill();
+                goldText.color = flashColour;
+                goldText.DOColor(Color.white, goldColourFlashDuration)
+                        .SetEase(goldColourFlashEase);
+            }
         }
 
         if (roundText != null)
@@ -272,22 +322,34 @@ public class ShopStatsUI : MonoBehaviour
 
     private void RefreshSelectionCircles()
     {
-        selections[0].color = disabledColor;
-        selections[1].color = disabledColor;
-        // Setting the circle colour ------------------------------------------
-        if (RoundManager.Instance.stagedCards.Count == 1)
-            selections[0].color = enabledColor;
-        else if (RoundManager.Instance.stagedCards.Count == 2)
+        int count = RoundManager.Instance.stagedCards.Count;
+
+        for (int i = 0; i < selections.Length; i++)
         {
-            selections[0].color = enabledColor;
-            selections[1].color = enabledColor;
+            if (selections[i] == null) continue;
+
+            bool shouldBeEnabled = i < count;
+            Color targetColour = shouldBeEnabled ? enabledColor : disabledColor;
+            Color intermediate = Color.yellow;
+
+            // Only animate if the colour is actually changing
+            if (selections[i].color != targetColour)
+            {
+                selections[i].DOKill();
+                selections[i].DOColor(targetColour, selectionColourDuration)
+                             .SetEase(selectionColourEase);
+
+                // Punch only when a slot becomes filled, not when emptied
+                if (shouldBeEnabled)
+                {
+                    RectTransform rt = selections[i].GetComponent<RectTransform>();
+                    rt.DOKill();
+                    rt.DOPunchScale(Vector3.one * selectionPunchScale,
+                                    selectionPunchDuration,
+                                    vibrato: 1, elasticity: 0.5f)
+                      .SetEase(selectionPunchEase);
+                }
+            }
         }
-        else
-        {
-            selections[0].color = disabledColor;
-            selections[1].color= disabledColor;
-        }
-            
-        
     }
 }

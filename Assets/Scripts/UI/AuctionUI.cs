@@ -35,6 +35,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using DG.Tweening;
 
 public class AuctionUI : MonoBehaviour
 {
@@ -59,8 +60,16 @@ public class AuctionUI : MonoBehaviour
     // ─────────────────────────────────────────────
 
     [Header("Item Selection Popup")]
-    [Tooltip("Root panel for the item selection popup.")]
+    [Tooltip("Root panel including the background overlay — activated normally.")]
     public GameObject selectionPopupPanel;
+
+    [Tooltip("The inner panel child that plays the open animation. " +
+             "Drag the inner window object here, not the overlay root.")]
+    public GameObject selectionInnerPanel;
+
+    [Tooltip("Duration of the selection popup open punch.")]
+    public float selectionOpenDuration = 0.35f;
+    public Ease selectionOpenEase = Ease.OutBack;
 
     [Tooltip("Container for the item slot buttons in the selection popup.")]
     public Transform selectionSlotContainer;
@@ -105,8 +114,16 @@ public class AuctionUI : MonoBehaviour
     // ─────────────────────────────────────────────
 
     [Header("Results / Game Over Popup")]
-    [Tooltip("Root panel for the results screen. Doubles as Game Over screen.")]
+    [Tooltip("Root panel including the background overlay — activated normally.")]
     public GameObject resultsPanel;
+
+    [Tooltip("The inner panel child that plays the open animation. " +
+             "Drag the inner window object here, not the overlay root.")]
+    public GameObject resultsInnerPanel;
+
+    [Tooltip("Duration of the results panel open punch.")]
+    public float resultsOpenDuration = 0.4f;
+    public Ease resultsOpenEase = Ease.OutBack;
 
     [Tooltip("Title text — 'Auction Complete' on pass, 'Game Over' on fail.")]
     public TextMeshProUGUI resultsTitleText;
@@ -196,6 +213,7 @@ public class AuctionUI : MonoBehaviour
 
         RefreshSelectionUI();
         selectionPopupPanel.SetActive(true);
+        OpenWithPunch(selectionInnerPanel, selectionOpenDuration, selectionOpenEase);
     }
 
     /// <summary>
@@ -290,8 +308,16 @@ public class AuctionUI : MonoBehaviour
     /// </summary>
     private void OnConfirmLotClicked()
     {
-        selectionPopupPanel.SetActive(false);
-        AuctionManager.Instance.ConfirmLotSelection(selectedItems);
+        RectTransform rt = selectionInnerPanel.GetComponent<RectTransform>();
+        rt.DOKill();
+        rt.DOScale(Vector3.zero, 0.2f)
+          .SetEase(Ease.InBack)
+          .OnComplete(() =>
+          {
+              selectionPopupPanel.SetActive(false);
+              rt.localScale = Vector3.one;
+              AuctionManager.Instance.ConfirmLotSelection(selectedItems);
+          });
     }
 
     // ─────────────────────────────────────────────
@@ -474,6 +500,7 @@ public class AuctionUI : MonoBehaviour
         gameOverButton.gameObject.SetActive(!passed);
 
         resultsPanel.SetActive(true);
+        OpenWithPunch(resultsInnerPanel, resultsOpenDuration, resultsOpenEase);
     }
 
     /// <summary>
@@ -520,5 +547,16 @@ public class AuctionUI : MonoBehaviour
         int remainder = value % 5;
         if (remainder == 0) return value;
         return value + (5 - remainder);
+    }
+
+    /// <summary>
+    /// Activates a panel and plays a scale punch open animation.
+    /// </summary>
+    private void OpenWithPunch(GameObject panel, float duration, Ease ease)
+    {
+        RectTransform rt = panel.GetComponent<RectTransform>();
+        rt.DOKill();
+        rt.localScale = Vector3.zero;
+        rt.DOScale(Vector3.one, duration).SetEase(ease);
     }
 }

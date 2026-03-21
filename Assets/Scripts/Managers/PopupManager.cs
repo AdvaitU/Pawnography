@@ -39,6 +39,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using DG.Tweening;
 
 /// <summary>
 /// A single reusable popup panel that adapts its content and buttons
@@ -51,7 +52,13 @@ public class PopupManager : MonoBehaviour
     public static PopupManager Instance { get; private set; }
 
     [Header("Popup Panel References — assign in Inspector")]
+    [Tooltip("The root panel including any background overlay — activated normally.")]
     public GameObject popupPanel;
+
+    [Tooltip("The inner panel child that plays the open/close animation. " +
+             "Drag the inner window here, not the overlay root.")]
+    public GameObject popupInnerPanel;
+
     public TextMeshProUGUI titleText;
     public TextMeshProUGUI bodyText;
 
@@ -70,6 +77,15 @@ public class PopupManager : MonoBehaviour
 
     [Tooltip("Padding below the source card in pixels.")]
     public Vector2 screenPadding = new Vector2(20f, 20f);
+
+    [Header("Animation")]
+    [Tooltip("Duration of the popup open scale punch.")]
+    public float openDuration = 0.3f;
+    public Ease openEase = Ease.OutBack;
+
+    [Tooltip("Duration of the popup close scale out.")]
+    public float closeDuration = 0.15f;
+    public Ease closeEase = Ease.InBack;
 
     private void Awake()
     {
@@ -94,7 +110,16 @@ public class PopupManager : MonoBehaviour
         ClearButtons();
         titleText.text = title;
         bodyText.text = body;
+
         popupPanel.SetActive(true);
+
+        if (popupInnerPanel != null)
+        {
+            RectTransform rt = popupInnerPanel.GetComponent<RectTransform>();
+            rt.DOKill();
+            rt.localScale = Vector3.zero;
+            rt.DOScale(Vector3.one, openDuration).SetEase(openEase);
+        }
     }
 
     /// <summary>
@@ -102,8 +127,24 @@ public class PopupManager : MonoBehaviour
     /// </summary>
     public void ClosePopup()
     {
-        popupPanel.SetActive(false);
-        ClearButtons();
+        if (popupInnerPanel != null)
+        {
+            RectTransform rt = popupInnerPanel.GetComponent<RectTransform>();
+            rt.DOKill();
+            rt.DOScale(Vector3.zero, closeDuration)
+              .SetEase(closeEase)
+              .OnComplete(() =>
+              {
+                  popupPanel.SetActive(false);
+                  rt.localScale = Vector3.one;
+                  ClearButtons();
+              });
+        }
+        else
+        {
+            popupPanel.SetActive(false);
+            ClearButtons();
+        }
     }
 
     /// <summary>

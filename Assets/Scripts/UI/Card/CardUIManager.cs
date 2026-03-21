@@ -30,6 +30,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using DG.Tweening;
 
 public class CardUIManager : MonoBehaviour
 {
@@ -39,6 +40,10 @@ public class CardUIManager : MonoBehaviour
     public GameObject cardPrefab;
     public Transform cardRowParent;
     public Button nextRoundButton;
+
+    [Header("Entry Stagger")]
+    [Tooltip("Delay in seconds between each card's entry animation on spawn.")]
+    public float cardEntryStagger = 0.08f;
 
     [Header("Runtime State")]
     public List<CardUI> activeCardUIs = new List<CardUI>();
@@ -72,13 +77,19 @@ public class CardUIManager : MonoBehaviour
     private void ClearCards()
     {
         foreach (CardUI card in activeCardUIs)
-            if (card != null) Destroy(card.gameObject);
+        {
+            if (card == null) continue;
+            card.GetComponent<RectTransform>().DOKill();
+            Destroy(card.gameObject);
+        }
 
         activeCardUIs.Clear();
     }
 
     private void SpawnCards()
     {
+        int index = 0;
+
         foreach (CardData cardData in RoundManager.Instance.currentRoundCards)
         {
             GameObject cardObj = Instantiate(cardPrefab, cardRowParent);
@@ -88,6 +99,23 @@ public class CardUIManager : MonoBehaviour
             {
                 cardUI.Populate(cardData);
                 activeCardUIs.Add(cardUI);
+
+                // Stagger entry — hide card initially, reveal after stagger delay.
+                // CardVisualController.PlaySpawnBurst() fires after this delay too.
+                RectTransform rt = cardObj.GetComponent<RectTransform>();
+                rt.localScale = Vector3.zero;
+
+                float delay = index * cardEntryStagger;
+                rt.DOScale(Vector3.one, 0f)
+                  .SetDelay(delay)
+                  .OnComplete(() =>
+                  {
+                      CardVisualController vc =
+                          cardUI.GetComponentInChildren<CardVisualController>();
+                      if (vc != null) vc.TriggerSpawnBurst();
+                  });
+
+                index++;
             }
             else
             {
@@ -98,8 +126,6 @@ public class CardUIManager : MonoBehaviour
         UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(
             cardRowParent.GetComponent<RectTransform>());
 
-        // Notify FreelancerManager so AutoAppraiser can reveal values
-        // on matching cards now that activeCardUIs is fully populated.
         FreelancerManager.Instance.NotifyCardsSpawned();
     }
 

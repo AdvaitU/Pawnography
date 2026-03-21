@@ -67,8 +67,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Quick info about the card such as cost, condition, upgrade type, etc.
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8ccaf1ec8c6d19347aa776af2a0e653d, type: 2}
+  m_sharedMaterial: {fileID: 5638067954312733684, guid: 8ccaf1ec8c6d19347aa776af2a0e653d, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -92,13 +92,13 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 15
-  m_fontSizeBase: 15
+  m_fontSize: 18
+  m_fontSizeBase: 18
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
-  m_fontStyle: 2
+  m_fontStyle: 0
   m_HorizontalAlignment: 1
   m_VerticalAlignment: 256
   m_textAlignment: 65535
@@ -203,8 +203,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Card Name
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8ccaf1ec8c6d19347aa776af2a0e653d, type: 2}
+  m_sharedMaterial: {fileID: 5638067954312733684, guid: 8ccaf1ec8c6d19347aa776af2a0e653d, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -228,13 +228,13 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 18
-  m_fontSizeBase: 18
+  m_fontSize: 21
+  m_fontSizeBase: 21
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
-  m_fontStyle: 1
+  m_fontStyle: 0
   m_HorizontalAlignment: 1
   m_VerticalAlignment: 512
   m_textAlignment: 65535
@@ -405,13 +405,14 @@ GameObject:
   - component: {fileID: 6432188548695136183}
   - component: {fileID: 5377362829129280974}
   - component: {fileID: 7957844583394619817}
+  - component: {fileID: 1336791814599913799}
   m_Layer: 5
   m_Name: SelectedOverlay
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &6432188548695136183
 RectTransform:
   m_ObjectHideFlags: 0
@@ -452,7 +453,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0.3137255, b: 0, a: 0.6901961}
+  m_Color: {r: 0, g: 0.3137255, b: 0, a: 0.5882353}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -469,6 +470,18 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!225 &1336791814599913799
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3982026971470498982}
+  m_Enabled: 1
+  m_Alpha: 0
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &4049858608619039655
 GameObject:
   m_ObjectHideFlags: 0
@@ -486,7 +499,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &2035151370029709492
 RectTransform:
   m_ObjectHideFlags: 0
@@ -887,7 +900,6 @@ GameObject:
   - component: {fileID: 1896989789866469406}
   - component: {fileID: 5147135332200421328}
   - component: {fileID: 2315949542843120844}
-  - component: {fileID: 6208812448108946422}
   m_Layer: 5
   m_Name: CardVisual
   m_TagString: Untagged
@@ -909,8 +921,8 @@ RectTransform:
   m_Children:
   - {fileID: 1454249206863968165}
   - {fileID: 2402442037594081171}
-  - {fileID: 6432188548695136183}
   - {fileID: 2035151370029709492}
+  - {fileID: 6432188548695136183}
   - {fileID: 9200191815082339600}
   m_Father: {fileID: 8186938883820069674}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -939,14 +951,27 @@ MonoBehaviour:
   idlePhaseOffset: 0
   randomisePhaseOffset: 1
   hoverRaiseAmount: 20
-  hoverRaiseSpeed: 10
+  hoverRaiseDuration: 0.15
+  hoverRaiseEase: 9
+  hoverDropEase: 8
   hoverScaleMultiplier: 1.08
-  hoverScaleSpeed: 10
+  hoverScaleDuration: 0.15
+  hoverScaleEase: 34
   maxTiltAngle: -15
   tiltSpeed: 5
   selectedRaiseAmount: 30
+  stagedRaiseDuration: 0.2
+  stagedRaiseEase: 34
+  selectedOverlay: {fileID: 3982026971470498982}
+  overlayFadeInDuration: 0.2
+  overlayFadeInEase: 6
+  overlayFadeOutDuration: 0.15
+  overlayFadeOutEase: 5
   spawnBurstScale: 1.25
   spawnBurstDuration: 0.5
+  spawnBurstEase: 21
+  spawnBurstRotationMin: 5
+  spawnBurstRotationMax: 10
 --- !u!114 &5147135332200421328
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -968,33 +993,3 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7545085444325877608}
   m_CullTransparentMesh: 1
---- !u!114 &6208812448108946422
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7545085444325877608}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_Sprite: {fileID: 0}
-  m_Type: 0
-  m_PreserveAspect: 0
-  m_FillCenter: 1
-  m_FillMethod: 4
-  m_FillAmount: 1
-  m_FillClockwise: 1
-  m_FillOrigin: 0
-  m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1

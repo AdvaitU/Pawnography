@@ -40,6 +40,7 @@
 
 using System.Collections.Generic;
 using UnityEngine;
+using DG.Tweening;
 
 public class PanelStackManager : MonoBehaviour
 {
@@ -59,6 +60,9 @@ public class PanelStackManager : MonoBehaviour
     [Tooltip("Lerp speed shared by all panel animations and the card row.")]
     public float slideSpeed = 8f;
 
+    [Tooltip("Easing applied to panel and card row slide animations.")]
+    public Ease panelSlideEase = Ease.OutCubic;
+
     // ── Data ─────────────────────────────────────────────────
 
     private class PanelEntry
@@ -74,7 +78,6 @@ public class PanelStackManager : MonoBehaviour
     private List<PanelEntry> panels = new List<PanelEntry>();
     private float cardRowBaseY = 0f;
     private float cardRowTargetY = 0f;
-    private bool isAnimating = false;
 
     // ── Lifecycle ────────────────────────────────────────────
 
@@ -94,42 +97,7 @@ public class PanelStackManager : MonoBehaviour
         SnapAllToClosed();
     }
 
-    private void Update()
-    {
-        if (!isAnimating) return;
-
-        bool stillMoving = false;
-
-        foreach (PanelEntry entry in panels)
-        {
-            if (entry.rt == null) continue;
-
-            float current = entry.rt.anchoredPosition.y;
-            float next = Mathf.Lerp(current, entry.targetY, Time.deltaTime * slideSpeed);
-
-            entry.rt.anchoredPosition = new Vector2(entry.rt.anchoredPosition.x, next);
-
-            if (Mathf.Abs(next - entry.targetY) > 0.5f)
-                stillMoving = true;
-            else
-                entry.rt.anchoredPosition =
-                    new Vector2(entry.rt.anchoredPosition.x, entry.targetY);
-        }
-
-        // Card row
-        float cardCurrent = cardRowRect.anchoredPosition.y;
-        float cardNext = Mathf.Lerp(cardCurrent, cardRowTargetY, Time.deltaTime * slideSpeed);
-
-        cardRowRect.anchoredPosition = new Vector2(cardRowRect.anchoredPosition.x, cardNext);
-
-        if (Mathf.Abs(cardNext - cardRowTargetY) > 0.5f)
-            stillMoving = true;
-        else
-            cardRowRect.anchoredPosition =
-                new Vector2(cardRowRect.anchoredPosition.x, cardRowTargetY);
-
-        isAnimating = stillMoving;
-    }
+    // No Update - Using Tweening instead
 
     // ── Public API ───────────────────────────────────────────
 
@@ -184,7 +152,7 @@ public class PanelStackManager : MonoBehaviour
         entry.topOffset = open ? topOffset : 0f;
 
         RecalculateTargets();
-        isAnimating = true;
+        AnimateToTargets();
     }
 
     // ── Private helpers ──────────────────────────────────────
@@ -214,11 +182,30 @@ public class PanelStackManager : MonoBehaviour
         cardRowTargetY = cardRowBaseY - cardDisplacement;
     }
 
+    private void AnimateToTargets()
+    {
+        foreach (PanelEntry entry in panels)
+        {
+            if (entry.rt == null) continue;
+            entry.rt.DOAnchorPosY(entry.targetY, 1f / slideSpeed)
+                    .SetEase(panelSlideEase)
+                    .SetUpdate(true);
+        }
+
+        if (cardRowRect != null)
+        {
+            cardRowRect.DOAnchorPosY(cardRowTargetY, 1f / slideSpeed)
+                       .SetEase(panelSlideEase)
+                       .SetUpdate(true);
+        }
+    }
+
     private void SnapAllToClosed()
     {
         foreach (PanelEntry entry in panels)
         {
             if (entry.rt == null) continue;
+            entry.rt.DOKill();
             entry.targetY = entry.panelHeight;
             entry.rt.anchoredPosition =
                 new Vector2(entry.rt.anchoredPosition.x, entry.panelHeight);

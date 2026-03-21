@@ -4,32 +4,52 @@
  * GAMEOBJECT:  WarehouseSlotPrefab instance
  * ------------------------------------------------------------
  * FUNCTION:
- *   Holds direct Inspector references to the slot's child UI
- *   elements so WarehousePanelUI does not need to use
- *   Transform.Find() with fragile name strings.
- *   Populated by WarehousePanelUI.PopulateSlot().
- * ------------------------------------------------------------
- * REFERENCED BY:
- *   WarehousePanelUI    -- reads references in PopulateSlot()
- * ------------------------------------------------------------
- * METHODS CALLED BY OTHER SCRIPTS:   None (data container only)
- * ------------------------------------------------------------
- * OPTIMISATION NOTES:
- *   No runtime methods. Pure reference container.
+ *   Holds UI element references for WarehousePanelUI.
+ *   Plays a DOTween entry animation when populated with an item.
  * ============================================================
  */
 
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using DG.Tweening;
 
 public class WarehouseSlot : MonoBehaviour
 {
-    [Tooltip("The art image displayed in this warehouse slot. " +
-         "Set to grey placeholder colour when the slot is empty.")]
+    [Tooltip("The art image displayed in this warehouse slot.")]
     public Image artImage;
 
-    [Tooltip("The item name label for this slot. " +
-         "Currently left empty by WarehousePanelUI.PopulateSlot().")]
+    [Tooltip("The item name label for this slot.")]
     public TextMeshProUGUI nameText;
+
+    [Header("Entry Animation")]
+    [Tooltip("Scale the slot punches to at spawn.")]
+    public float entryBurstScale = 1.15f;
+
+    [Tooltip("Duration of the entry punch in seconds.")]
+    public float entryDuration = 0.3f;
+
+    [Tooltip("Easing for the entry punch.")]
+    public Ease entryEase = Ease.OutBack;
+
+    private RectTransform rectTransform;
+
+    private void Awake()
+    {
+        rectTransform = GetComponent<RectTransform>();
+    }
+
+    /// <summary>
+    /// Plays a scale punch entry animation. Call after populating the slot
+    /// with item data. Only fires for occupied slots — pass hasItem = false
+    /// to skip animation on empty slots.
+    /// </summary>
+    public void PlayEntryAnimation(bool hasItem)
+    {
+        if (!hasItem) return;
+
+        rectTransform.localScale = Vector3.zero;
+        rectTransform.DOScale(1f, entryDuration)
+                     .SetEase(entryEase);
+    }
 }
